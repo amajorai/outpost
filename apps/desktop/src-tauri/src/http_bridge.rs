@@ -166,7 +166,7 @@ async fn handle_mcp(State(s): State<HttpBridgeState>, Json(body): Json<McpReques
                     "tools": {}
                 },
                 "serverInfo": {
-                    "name": "backstage",
+                    "name": "outpost",
                     "version": "0.0.1"
                 }
             }

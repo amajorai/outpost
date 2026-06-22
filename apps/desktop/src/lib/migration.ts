@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { logger } from "@/lib/logger";
 
 const OLD_LOCALSTORAGE_KEY = "youtube.pub:clipboard:v1";
-const NEW_LOCALSTORAGE_KEY = "backstage:clipboard:v1";
+const NEW_LOCALSTORAGE_KEY = "outpost:clipboard:v1";
 
 async function migrateAppData(): Promise<void> {
   try {

@@ -37,7 +37,7 @@ export function initTracing() {
 
   const sdk = new NodeSDK({
     resource: resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: "backstage-server",
+      [ATTR_SERVICE_NAME]: "outpost-server",
       [ATTR_SERVICE_VERSION]: "0.1.0",
     }),
     spanProcessors: [new BatchSpanProcessor(traceExporter)],

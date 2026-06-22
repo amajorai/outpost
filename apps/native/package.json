@@ -47,12 +47,12 @@
     "@better-auth/expo": "catalog:",
     "dotenv": "catalog:",
     "zod": "catalog:",
-    "@backstage/env": "workspace:*"
+    "@outpost/env": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.10.0",
     "@types/react": "~19.1.0",
     "typescript": "^5",
-    "@backstage/config": "workspace:*"
+    "@outpost/config": "workspace:*"
   }
 }

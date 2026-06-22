@@ -1,10 +1,10 @@
 {
-  "name": "@backstage/mcp-server",
+  "name": "@outpost/mcp-server",
   "version": "0.0.1",
   "private": true,
   "type": "module",
   "bin": {
-    "backstage-mcp": "./dist/index.js"
+    "outpost-mcp": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc"

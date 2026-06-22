@@ -105,7 +105,7 @@ export function TitleBar({
                 </button>
               </TooltipTrigger>
               <TooltipContent align="start" side="bottom">
-                <p className="font-bold text-[10px]">Backstage</p>
+                <p className="font-bold text-[10px]">Outpost</p>
               </TooltipContent>
             </Tooltip>
           )}

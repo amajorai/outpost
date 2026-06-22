@@ -70,7 +70,7 @@ export function Pricing() {
                 </div>
                 <div>
                   <h3 className="mb-1 font-display text-2xl text-white uppercase tracking-wide">
-                    Backstage Lifetime
+                    Outpost Lifetime
                   </h3>
                   <p className="text-sm text-white/45">
                     One payment. Every feature. Every platform. Yours forever,
@@ -130,7 +130,7 @@ export function Pricing() {
                   href={CHECKOUT_URL}
                   onClick={sounds.click}
                 >
-                  Buy Backstage Lifetime
+                  Buy Outpost Lifetime
                 </a>
                 <p className="text-center text-[11px] text-white/35">
                   Secure checkout via Polar. Instant license delivery.
@@ -150,11 +150,11 @@ export function Pricing() {
 const FAQ_ITEMS = [
   {
     q: 'What does "lifetime" actually mean?',
-    a: 'You hire Backstage once for $29 and it works on your machine forever — no subscription, no expiry, no "AI credit" meter. Your purchase includes 1 year of updates from the day you buy. After that year, your app keeps running exactly as it was; you just won\'t receive new versions unless you renew. If we shut down tomorrow, your designer keeps working because it lives on your machine, not ours.',
+    a: 'You hire Outpost once for $29 and it works on your machine forever — no subscription, no expiry, no "AI credit" meter. Your purchase includes 1 year of updates from the day you buy. After that year, your app keeps running exactly as it was; you just won\'t receive new versions unless you renew. If we shut down tomorrow, your designer keeps working because it lives on your machine, not ours.',
   },
   {
     q: 'What\'s "bring your own Gemini key" and why?',
-    a: "AI image generation needs compute. Other tools bundle that cost into a fat monthly fee, then ration your usage. Backstage uses Google's Gemini API and you bring your own free key from aistudio.google.com, so the cost is whatever you actually generate. Most creators spend under $2 a month on Gemini. Your key is stored locally and encrypted in your OS keychain.",
+    a: "AI image generation needs compute. Other tools bundle that cost into a fat monthly fee, then ration your usage. Outpost uses Google's Gemini API and you bring your own free key from aistudio.google.com, so the cost is whatever you actually generate. Most creators spend under $2 a month on Gemini. Your key is stored locally and encrypted in your OS keychain.",
   },
   {
     q: "Do I have to use AI?",
@@ -162,7 +162,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What if the app shuts down?",
-    a: "Backstage is open source under the AGPL-3.0 license. The full source is on GitHub. Your installed copy keeps running indefinitely. If we ever stop maintaining it, you can build the latest version yourself, fork it, or hire anyone to keep it running.",
+    a: "Outpost is open source under the AGPL-3.0 license. The full source is on GitHub. Your installed copy keeps running indefinitely. If we ever stop maintaining it, you can build the latest version yourself, fork it, or hire anyone to keep it running.",
   },
   {
     q: "Can I use it on multiple machines?",
@@ -174,11 +174,11 @@ const FAQ_ITEMS = [
   },
   {
     q: "What about commercial use of the BRIA model?",
-    a: "The default Backstage build uses a WebAssembly background-removal model under a permissive license that's fine for commercial use. The optional open-source build includes BRIA RMBG-1.4, which has a non-commercial license: it's there for hobbyists who want the sharper cutouts. For monetized YouTube channels, the default model is all you need.",
+    a: "The default Outpost build uses a WebAssembly background-removal model under a permissive license that's fine for commercial use. The optional open-source build includes BRIA RMBG-1.4, which has a non-commercial license: it's there for hobbyists who want the sharper cutouts. For monetized YouTube channels, the default model is all you need.",
   },
   {
     q: "Why is it so cheap compared to hiring an actual designer?",
-    a: "A freelance thumbnail designer charges $50–200 per thumbnail or $300–800/month on retainer. Backstage does the same job for $29 once. It doesn't pay for your AI compute, doesn't run a SaaS backend, and has no sales team or investors to repay. Built by a small team that wants the tool to exist at a fair price.",
+    a: "A freelance thumbnail designer charges $50–200 per thumbnail or $300–800/month on retainer. Outpost does the same job for $29 once. It doesn't pay for your AI compute, doesn't run a SaaS backend, and has no sales team or investors to repay. Built by a small team that wants the tool to exist at a fair price.",
   },
 ];
 

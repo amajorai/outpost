@@ -65,7 +65,7 @@ export function StageIntro() {
         className="font-mono text-[11px] text-white/70 uppercase"
         data-intro-word
       >
-        Backstage
+        Outpost
       </span>
     </div>
   );
@@ -160,7 +160,7 @@ export function Hero() {
 
         <Reveal delay={introDelay + 0.7} trigger="load">
           <p className="mx-auto mt-6 max-w-[560px] text-balance text-base text-white/55 md:text-lg">
-            Backstage is the pro-grade desktop studio for YouTube creators. Real
+            Outpost is the pro-grade desktop studio for YouTube creators. Real
             layers, AI generation on your own Gemini key, frame-perfect video
             stills — all running 100% on your machine.
           </p>
@@ -217,7 +217,7 @@ export function Hero() {
             }}
           >
             <Image
-              alt="Backstage editor with a layered thumbnail open"
+              alt="Outpost editor with a layered thumbnail open"
               height={620}
               priority
               src="/landing/screenshot-editor.png"

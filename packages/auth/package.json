@@ -1,5 +1,5 @@
 {
-  "name": "@backstage/auth",
+  "name": "@outpost/auth",
   "type": "module",
   "exports": {
     ".": {
@@ -12,11 +12,11 @@
   "scripts": {},
   "devDependencies": {
     "typescript": "^5",
-    "@backstage/config": "workspace:*"
+    "@outpost/config": "workspace:*"
   },
   "dependencies": {
-    "@backstage/db": "workspace:*",
-    "@backstage/env": "workspace:*",
+    "@outpost/db": "workspace:*",
+    "@outpost/env": "workspace:*",
     "@better-auth/expo": "catalog:",
     "@polar-sh/better-auth": "catalog:",
     "@polar-sh/sdk": "^0.34.16",

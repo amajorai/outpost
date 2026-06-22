@@ -8,17 +8,17 @@ import {
   type ListToolsResult,
 } from "@modelcontextprotocol/sdk/types.js";
 
-const BACKSTAGE_URL = process.env.BACKSTAGE_API_URL ?? "http://localhost:37842";
+const OUTPOST_URL = process.env.OUTPOST_API_URL ?? "http://localhost:37842";
 
 const server = new Server(
-  { name: "backstage", version: "0.0.1" },
+  { name: "outpost", version: "0.0.1" },
   { capabilities: { tools: {} } }
 );
 
 server.setRequestHandler(
   ListToolsRequestSchema,
   async (): Promise<ListToolsResult> => {
-    const res = await fetch(`${BACKSTAGE_URL}/api/tools`);
+    const res = await fetch(`${OUTPOST_URL}/api/tools`);
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}`);
     }
@@ -29,7 +29,7 @@ server.setRequestHandler(
 server.setRequestHandler(
   CallToolRequestSchema,
   async (req): Promise<CallToolResult> => {
-    const res = await fetch(`${BACKSTAGE_URL}/api/tools/call`, {
+    const res = await fetch(`${OUTPOST_URL}/api/tools/call`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

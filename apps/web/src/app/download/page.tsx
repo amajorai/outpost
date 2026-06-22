@@ -13,7 +13,7 @@ interface GitHubRelease {
   assets: GitHubAsset[];
 }
 
-const GITHUB_URL = "https://github.com/amajorai/backstage";
+const GITHUB_URL = "https://github.com/amajorai/outpost";
 
 const PLATFORMS = [
   {
@@ -77,7 +77,7 @@ export default async function DownloadPage() {
 
   try {
     const res = await fetch(
-      "https://api.github.com/repos/amajorai/backstage/releases/latest",
+      "https://api.github.com/repos/amajorai/outpost/releases/latest",
       { next: { revalidate: 3600 } }
     );
     if (res.ok) release = await res.json();
@@ -110,11 +110,11 @@ export default async function DownloadPage() {
             size={20}
             strokeWidth={3}
           />
-          Backstage
+          Outpost
         </Link>
 
         <h1 className="mb-2 text-center font-medium font-sans text-3xl tracking-tight">
-          Download Backstage
+          Download Outpost
         </h1>
         <p className="mb-10 text-center text-zinc-400">
           {version ? `Version ${version} · ` : ""}Free &amp; open source

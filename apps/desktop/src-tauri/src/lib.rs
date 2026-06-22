@@ -212,7 +212,7 @@ pub fn run() {
             // Start local HTTP bridge for MCP clients
             let pending = app.state::<acp::AcpState>().pending.clone();
             let app_handle = app.handle().clone();
-            let port: u16 = std::env::var("BACKSTAGE_HTTP_PORT")
+            let port: u16 = std::env::var("OUTPOST_HTTP_PORT")
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .or_else(|| {

@@ -1,5 +1,5 @@
 {
-  "name": "@backstage/db",
+  "name": "@outpost/db",
   "type": "module",
   "exports": {
     ".": {
@@ -12,12 +12,12 @@
   "scripts": {},
   "devDependencies": {
     "typescript": "^5",
-    "@backstage/config": "workspace:*"
+    "@outpost/config": "workspace:*"
   },
   "dependencies": {
     "mongoose": "^8.14.0",
     "dotenv": "catalog:",
     "zod": "catalog:",
-    "@backstage/env": "workspace:*"
+    "@outpost/env": "workspace:*"
   }
 }

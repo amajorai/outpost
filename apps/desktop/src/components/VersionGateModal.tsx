@@ -109,7 +109,7 @@ export function VersionGateModal() {
           </Button>
           <Button
             className="w-full"
-            onClick={() => openUrl("https://backstage.amajorai.com/#pricing")}
+            onClick={() => openUrl("https://outpost.amajorai.com/#pricing")}
             variant="outline"
           >
             Renew updates — get the latest version

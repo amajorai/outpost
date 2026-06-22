@@ -1,6 +1,6 @@
-# @backstage/mcp-server
+# @outpost/mcp-server
 
-MCP server that proxies tool calls from Claude Desktop (and other MCP clients) to the Backstage HTTP bridge running locally on port 37842.
+MCP server that proxies tool calls from Claude Desktop (and other MCP clients) to the Outpost HTTP bridge running locally on port 37842.
 
 ## Build
 
@@ -19,7 +19,7 @@ Add to your `claude_desktop_config.json` under `mcpServers`:
 ```json
 {
   "mcpServers": {
-    "backstage": {
+    "outpost": {
       "command": "node",
       "args": ["/absolute/path/to/packages/mcp-server/dist/index.js"]
     }
@@ -27,22 +27,22 @@ Add to your `claude_desktop_config.json` under `mcpServers`:
 }
 ```
 
-Backstage must be running for tool calls to succeed. The server will start but requests will fail until the app is open.
+Outpost must be running for tool calls to succeed. The server will start but requests will fail until the app is open.
 
 ## Environment Variables
 
-- `BACKSTAGE_API_URL` - Override the default bridge URL (`http://localhost:37842`). Useful if Backstage is configured to use a non-default port.
+- `OUTPOST_API_URL` - Override the default bridge URL (`http://localhost:37842`). Useful if Outpost is configured to use a non-default port.
 
 Example:
 
 ```json
 {
   "mcpServers": {
-    "backstage": {
+    "outpost": {
       "command": "node",
       "args": ["/path/to/dist/index.js"],
       "env": {
-        "BACKSTAGE_API_URL": "http://localhost:9000"
+        "OUTPOST_API_URL": "http://localhost:9000"
       }
     }
   }

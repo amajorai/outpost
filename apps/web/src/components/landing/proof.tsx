@@ -22,7 +22,7 @@ const PRICE_ROWS = [
   { name: "Photoshop", price: 262, cadence: "/yr", share: 0.78 },
   { name: "Figma", price: 144, cadence: "/yr", share: 0.43 },
   { name: "Canva Pro", price: 120, cadence: "/yr", share: 0.36 },
-  { name: "Backstage", price: 29, cadence: "once", share: 0.09, hero: true },
+  { name: "Outpost", price: 29, cadence: "once", share: 0.09, hero: true },
 ];
 
 export function Money() {
@@ -60,9 +60,9 @@ export function Money() {
         </SectionTitle>
         <Reveal className="mt-5 max-w-[520px]" delay={0.15}>
           <p className="text-base text-white/50 md:text-lg">
-            Everyone else re-bills you every month for the same pixels.
-            Backstage charges once, and your AI spend goes straight to Google at
-            API rates — most creators pay under $2 a month.
+            Everyone else re-bills you every month for the same pixels. Outpost
+            charges once, and your AI spend goes straight to Google at API rates
+            — most creators pay under $2 a month.
           </p>
         </Reveal>
 
@@ -113,7 +113,7 @@ export function Money() {
         <Reveal className="mt-12" delay={0.1}>
           <div className="inline-block rounded-xl border border-white/10 bg-white/[0.03] p-5 text-sm text-white/50">
             <strong className="text-white">Real math:</strong> 30 Gemini
-            thumbnail variations a month ≈ $1.20. After 2 months, Backstage plus
+            thumbnail variations a month ≈ $1.20. After 2 months, Outpost plus
             your Gemini spend is still cheaper than one month of Canva Pro.
           </div>
         </Reveal>
@@ -196,7 +196,7 @@ export function Privacy() {
         </SectionTitle>
         <Reveal className="mt-5 max-w-[520px]" delay={0.15}>
           <p className="text-base text-white/50 md:text-lg">
-            Backstage is a native desktop app, not a web wrapper with your files
+            Outpost is a native desktop app, not a web wrapper with your files
             on someone else&apos;s server. Your projects, your source files,
             your API keys.
           </p>
@@ -341,7 +341,7 @@ export function CompareTable() {
             >
               <div className="px-5 py-4 text-white/30" />
               <div className="bg-[var(--stage-red)]/10 px-5 py-4 text-[var(--stage-red)]">
-                Backstage
+                Outpost
               </div>
               {["Photoshop", "Canva Pro", "Figma"].map((b) => (
                 <div className="px-5 py-4 text-white/30" key={b}>
@@ -378,7 +378,7 @@ export function CompareTable() {
 
 // ─── Open source ──────────────────────────────────────────────────────
 const TERMINAL_LINES = [
-  { label: "Source", value: "github.com/amajorai/backstage" },
+  { label: "Source", value: "github.com/amajorai/outpost" },
   { label: "License", value: "AGPL-3.0 (BRIA model is non-commercial)" },
   { label: "Stack", value: "Tauri, Rust, React, TypeScript" },
   { label: "Issues", value: "public, triaged weekly" },
@@ -397,7 +397,7 @@ export function OpenSource() {
             </SectionTitle>
             <Reveal className="mt-5" delay={0.15}>
               <p className="mb-7 max-w-[480px] text-white/50">
-                Every line of Backstage is on GitHub: the desktop app, the layer
+                Every line of Outpost is on GitHub: the desktop app, the layer
                 engine, the AI integrations. The one-time purchase is for the
                 prebuilt, signed, auto-updating binaries — including 1 year of
                 updates. Rather compile it yourself? That&apos;s free.
@@ -432,7 +432,7 @@ export function OpenSource() {
                 <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
                 <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
                 <span className="ml-3 font-mono text-[11px] text-white/30">
-                  ~/backstage
+                  ~/outpost
                 </span>
               </div>
               <div className="flex flex-col gap-3 p-5 font-mono text-sm">

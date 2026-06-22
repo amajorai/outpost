@@ -2,8 +2,8 @@ import { initTracing } from "./tracing.js";
 
 initTracing();
 
-import { auth } from "@backstage/auth";
-import { env } from "@backstage/env/server";
+import { auth } from "@outpost/auth";
+import { env } from "@outpost/env/server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";

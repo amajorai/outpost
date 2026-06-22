@@ -73,7 +73,7 @@ export function LicenseStatus() {
         {windowExpired && (
           <Button
             className="h-6 gap-1 px-2 text-xs"
-            onClick={() => openUrl("https://backstage.amajorai.com/#pricing")}
+            onClick={() => openUrl("https://outpost.amajorai.com/#pricing")}
             size="sm"
             variant="outline"
           >

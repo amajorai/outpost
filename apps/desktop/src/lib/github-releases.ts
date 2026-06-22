@@ -1,4 +1,4 @@
-const GITHUB_REPO = "amajorai/backstage";
+const GITHUB_REPO = "amajorai/outpost";
 const RELEASES_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases`;
 
 /** Strips a leading "v" so "v1.2.1" and "1.2.1" both compare correctly. */

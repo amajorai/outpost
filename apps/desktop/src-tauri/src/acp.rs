@@ -313,7 +313,7 @@ fn execute_acp_session(
         .unwrap_or_default();
     let mcp_servers = if supports_http_mcp {
         serde_json::json!([{
-            "name": "backstage",
+            "name": "outpost",
             "type": "http",
             "url": format!("http://127.0.0.1:{bridge_port}/mcp"),
             "headers": []
@@ -529,7 +529,7 @@ fn execute_acp_session(
 }
 
 fn bridge_port(app: &AppHandle) -> u16 {
-    std::env::var("BACKSTAGE_HTTP_PORT")
+    std::env::var("OUTPOST_HTTP_PORT")
         .ok()
         .and_then(|v| v.parse().ok())
         .or_else(|| {

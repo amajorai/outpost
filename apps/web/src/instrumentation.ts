@@ -11,7 +11,7 @@ export async function register() {
     if (!(token && dataset)) return;
 
     registerOTel({
-      serviceName: "backstage-web",
+      serviceName: "outpost-web",
       traceExporter: new OTLPTraceExporter({
         url: `https://${domain}/v1/traces`,
         headers: {

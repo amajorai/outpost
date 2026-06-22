@@ -1,5 +1,5 @@
 {
-  "extends": "@backstage/config/tsconfig.base.json",
+  "extends": "@outpost/config/tsconfig.base.json",
   "compilerOptions": {
     "target": "ES2022",
     "module": "NodeNext",

@@ -1,5 +1,5 @@
 {
-  "name": "backstage",
+  "name": "outpost",
   "private": true,
   "workspaces": {
     "packages": [
@@ -31,7 +31,7 @@
     "dev:desktop": "turbo -F desktop dev"
   },
   "dependencies": {
-    "@backstage/env": "workspace:*",
+    "@outpost/env": "workspace:*",
     "@web-kits/audio": "^0.1.0",
     "dotenv": "catalog:",
     "zod": "catalog:"
@@ -39,7 +39,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.3.11",
     "@types/bun": "catalog:",
-    "@backstage/config": "workspace:*",
+    "@outpost/config": "workspace:*",
     "husky": "^9.1.7",
     "lefthook": "^2.0.13",
     "lint-staged": "^16.2.7",

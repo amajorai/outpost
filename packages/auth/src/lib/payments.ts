@@ -1,4 +1,4 @@
-import { env } from "@backstage/env/server";
+import { env } from "@outpost/env/server";
 import { Polar } from "@polar-sh/sdk";
 
 export const polarClient = new Polar({

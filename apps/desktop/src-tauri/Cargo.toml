@@ -1,12 +1,12 @@
 [package]
-name = "backstage"
+name = "outpost"
 version = "1.5.3"
 description = "YouTube Thumbnail Studio"
 authors = ["you"]
 edition = "2021"
 
 [lib]
-name = "backstage_lib"
+name = "outpost_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [build-dependencies]

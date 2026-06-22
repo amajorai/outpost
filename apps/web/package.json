@@ -14,8 +14,8 @@
     "@axiomhq/js": "^1.6.1",
     "@axiomhq/logging": "^0.2.1",
     "@axiomhq/react": "^0.2.1",
-    "@backstage/auth": "workspace:*",
-    "@backstage/env": "workspace:*",
+    "@outpost/auth": "workspace:*",
+    "@outpost/env": "workspace:*",
     "@base-ui/react": "^1.0.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.217.0",
     "@polar-sh/better-auth": "catalog:",
@@ -45,7 +45,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@backstage/config": "workspace:*",
+    "@outpost/config": "workspace:*",
     "@tailwindcss/postcss": "^4.1.10",
     "@tanstack/react-query-devtools": "^5.91.1",
     "@tauri-apps/cli": "^2.4.0",

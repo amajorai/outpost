@@ -10,9 +10,9 @@
     "start": "bun run dist/index.js"
   },
   "dependencies": {
-    "@backstage/auth": "workspace:*",
-    "@backstage/db": "workspace:*",
-    "@backstage/env": "workspace:*",
+    "@outpost/auth": "workspace:*",
+    "@outpost/db": "workspace:*",
+    "@outpost/env": "workspace:*",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/api-logs": "^0.217.0",
     "@opentelemetry/exporter-logs-otlp-http": "^0.217.0",
@@ -32,6 +32,6 @@
     "@types/bun": "catalog:",
     "typescript": "^5",
     "tsdown": "^0.16.5",
-    "@backstage/config": "workspace:*"
+    "@outpost/config": "workspace:*"
   }
 }

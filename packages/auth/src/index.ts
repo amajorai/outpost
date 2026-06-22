@@ -1,6 +1,6 @@
-import { client } from "@backstage/db";
-import { env } from "@backstage/env/server";
 import { expo } from "@better-auth/expo";
+import { client } from "@outpost/db";
+import { env } from "@outpost/env/server";
 import { checkout, polar, portal } from "@polar-sh/better-auth";
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";

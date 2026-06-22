@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Backstage · YouTube thumbnails that actually click",
+  title: "Outpost · YouTube thumbnails that actually click",
   description:
     "The open-source YouTube thumbnail studio. Layer-based editor, AI background removal, Gemini image gen, all on your machine. Bring your own keys. One-time purchase $29 — 1 year of updates included.",
 };

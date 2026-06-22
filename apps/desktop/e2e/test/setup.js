@@ -14,7 +14,7 @@ const application = path.resolve(
   "src-tauri",
   "target",
   "debug",
-  "backstage.exe"
+  "outpost.exe"
 );
 
 // WebDriver instance

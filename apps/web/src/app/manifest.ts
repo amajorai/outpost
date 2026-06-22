@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Backstage",
-    short_name: "Backstage",
+    name: "Outpost",
+    short_name: "Outpost",
     description: "my pwa app",
     start_url: "/new",
     display: "standalone",

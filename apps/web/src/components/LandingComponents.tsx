@@ -22,7 +22,7 @@ const BLUE = "var(--foreground)";
 const CHECKOUT_URL =
   process.env.NEXT_PUBLIC_POLAR_CHECKOUT_URL ??
   "https://sandbox-api.polar.sh/v1/checkout-links/polar_cl_aGUui9yb3Gb4ebQMX2FFj13h4kBHGKrVW29fM0Nqp2m/redirect";
-const GITHUB_URL = "https://github.com/amajorai/backstage";
+const GITHUB_URL = "https://github.com/amajorai/outpost";
 const TRAILING_ZERO_RE = /\.0$/;
 
 // ─── GitHub data hook ────────────────────────────────────────────────
@@ -37,7 +37,7 @@ function useGitHubData() {
   const [stars, setStars] = useState<string>("—");
 
   useEffect(() => {
-    fetch("https://api.github.com/repos/amajorai/backstage")
+    fetch("https://api.github.com/repos/amajorai/outpost")
       .then((r) => r.json())
       .then((d) => {
         if (typeof d.stargazers_count === "number") {
@@ -185,7 +185,7 @@ function Nav({ stars }: { stars: string }) {
               size={18}
               strokeWidth={3}
             />
-            Backstage
+            Outpost
           </a>
           <div className="ml-1 flex items-center gap-0.5">
             {navLinks.map(([href, label]) => (
@@ -262,7 +262,7 @@ function Nav({ stars }: { stars: string }) {
               size={20}
               strokeWidth={3}
             />
-            <span>Backstage</span>
+            <span>Outpost</span>
           </a>
           <a
             className="flex flex-col items-center gap-1 text-muted-foreground no-underline transition-colors hover:text-foreground"
@@ -682,7 +682,7 @@ function Hero() {
             }}
           >
             <Image
-              alt="Backstage editor with a layered thumbnail open"
+              alt="Outpost editor with a layered thumbnail open"
               height={620}
               src="/landing/screenshot-editor.png"
               style={{ width: "100%", height: "auto", display: "block" }}
@@ -1739,7 +1739,7 @@ function Bento() {
           </h3>
           <p className="text-muted-foreground text-sm">
             Toggle, lock, group, drag to reorder. A good designer doesn't cut
-            corners. Neither does Backstage.
+            corners. Neither does Outpost.
           </p>
         </div>
         <LayersMock />
@@ -1822,7 +1822,7 @@ function ByoGemini() {
             </h2>
             <p className="mb-5 text-muted-foreground">
               Other tools bundle AI into a fat monthly fee and ration your
-              usage. Your Backstage designer uses Google Gemini. Paste your free
+              usage. Your Outpost designer uses Google Gemini. Paste your free
               key once and pay Google directly at API rates. Most creators spend
               under <strong className="text-foreground">$2 a month</strong> even
               when generating dozens of variants per video.
@@ -1852,7 +1852,7 @@ function ByoGemini() {
               <strong className="text-foreground">Real math:</strong> Generating
               30 thumbnail variations a month on Gemini 2.5 Flash Image costs
               about <strong className="text-foreground">$1.20</strong>. After 2
-              months, Backstage&apos;s lifetime price plus your Gemini spend is
+              months, Outpost&apos;s lifetime price plus your Gemini spend is
               still less than one month of Canva Pro.
             </div>
           </div>
@@ -2010,7 +2010,7 @@ function Privacy() {
             Your designer works only for you.
           </h2>
           <p className="max-w-[540px] text-base text-muted-foreground md:text-lg">
-            Backstage is a native desktop app, not a web wrapper with your files
+            Outpost is a native desktop app, not a web wrapper with your files
             on someone else&apos;s server. Your projects, your source files,
             your API keys. Your designer is loyal.
           </p>
@@ -2188,7 +2188,7 @@ function CompareTable() {
                 color: BLUE,
               }}
             >
-              Backstage
+              Outpost
             </div>
             {["Photoshop", "Canva Pro", "Figma"].map((b) => (
               <div className="px-5 py-3.5 text-muted-foreground" key={b}>
@@ -2245,7 +2245,7 @@ function OssCallout() {
   );
 
   const lines = [
-    { label: "Source:", value: "github.com/amajorai/backstage" },
+    { label: "Source:", value: "github.com/amajorai/outpost" },
     { label: "License:", value: "AGPL-3.0 (BRIA model is non-commercial)" },
     { label: "Stack:", value: "Tauri, Rust, React, TypeScript" },
     { label: "Issues:", value: "# public, triaged weekly" },
@@ -2266,7 +2266,7 @@ function OssCallout() {
                 Your designer's source code is public. Audit it yourself.
               </h2>
               <p className="mb-6 text-muted-foreground">
-                Every line of Backstage is on GitHub: the desktop app, the pro
+                Every line of Outpost is on GitHub: the desktop app, the pro
                 level editing engine, and the AI integrations. The one-time
                 purchase is for the prebuilt, signed, auto-updating binaries we
                 ship and support — including 1 year of updates. If you&apos;d
@@ -2371,7 +2371,7 @@ function Pricing() {
                 </div>
                 <div>
                   <h3 className="mb-1 font-heading font-medium text-foreground text-xl">
-                    Backstage Lifetime
+                    Outpost Lifetime
                   </h3>
                   <p className="text-muted-foreground text-sm">
                     One payment. Every feature. Every platform. Yours forever,
@@ -2470,7 +2470,7 @@ function Pricing() {
                   }
                   variant="contrast"
                 >
-                  Buy Backstage Lifetime
+                  Buy Outpost Lifetime
                   <svg
                     fill="none"
                     height="16"
@@ -2509,12 +2509,12 @@ function FAQ() {
   const items = [
     {
       q: 'What does "lifetime" actually mean?',
-      a: 'You hire Backstage once for $29 and it works on your machine forever — no subscription, no expiry, no "AI credit" meter. Your purchase includes 1 year of updates from the day you buy. After that year, your app keeps running exactly as it was; you just won\'t receive new versions unless you renew. If we shut down tomorrow, your designer keeps working because it lives on your machine, not ours.',
+      a: 'You hire Outpost once for $29 and it works on your machine forever — no subscription, no expiry, no "AI credit" meter. Your purchase includes 1 year of updates from the day you buy. After that year, your app keeps running exactly as it was; you just won\'t receive new versions unless you renew. If we shut down tomorrow, your designer keeps working because it lives on your machine, not ours.',
       open: true,
     },
     {
       q: 'What\'s "bring your own Gemini key" and why?',
-      a: "AI image generation needs compute. Other tools bundle that cost into a fat monthly fee, then ration your usage. Backstage uses Google's Gemini API and you bring your own free key from aistudio.google.com, so the cost is whatever you actually generate. Most creators spend under $2 a month on Gemini. Your key is stored locally and encrypted in your OS keychain.",
+      a: "AI image generation needs compute. Other tools bundle that cost into a fat monthly fee, then ration your usage. Outpost uses Google's Gemini API and you bring your own free key from aistudio.google.com, so the cost is whatever you actually generate. Most creators spend under $2 a month on Gemini. Your key is stored locally and encrypted in your OS keychain.",
     },
     {
       q: "Do I have to use AI?",
@@ -2522,7 +2522,7 @@ function FAQ() {
     },
     {
       q: "What if the app shuts down?",
-      a: "Backstage is open source under the AGPL-3.0 license. The full source is on GitHub. Your installed copy keeps running indefinitely. If we ever stop maintaining it, you can build the latest version yourself, fork it, or hire anyone to keep it running.",
+      a: "Outpost is open source under the AGPL-3.0 license. The full source is on GitHub. Your installed copy keeps running indefinitely. If we ever stop maintaining it, you can build the latest version yourself, fork it, or hire anyone to keep it running.",
     },
     {
       q: "Can I use it on multiple machines?",
@@ -2534,11 +2534,11 @@ function FAQ() {
     },
     {
       q: "What about commercial use of the BRIA model?",
-      a: "The default Backstage build uses a WebAssembly background-removal model under a permissive license that's fine for commercial use. The optional open-source build includes BRIA RMBG-1.4, which has a non-commercial license: it's there for hobbyists who want the sharper cutouts. For monetized YouTube channels, the default model is all you need.",
+      a: "The default Outpost build uses a WebAssembly background-removal model under a permissive license that's fine for commercial use. The optional open-source build includes BRIA RMBG-1.4, which has a non-commercial license: it's there for hobbyists who want the sharper cutouts. For monetized YouTube channels, the default model is all you need.",
     },
     {
       q: "Why is it so cheap compared to hiring an actual designer?",
-      a: "A freelance thumbnail designer charges $50–200 per thumbnail or $300–800/month on retainer. Backstage does the same job for $29 once. It doesn't pay for your AI compute, doesn't run a SaaS backend, and has no sales team or investors to repay. Built by a small team that wants the tool to exist at a fair price.",
+      a: "A freelance thumbnail designer charges $50–200 per thumbnail or $300–800/month on retainer. Outpost does the same job for $29 once. It doesn't pay for your AI compute, doesn't run a SaaS backend, and has no sales team or investors to repay. Built by a small team that wants the tool to exist at a fair price.",
     },
   ];
 
@@ -2646,7 +2646,7 @@ function Footer() {
                 size={18}
                 strokeWidth={2.5}
               />
-              Backstage
+              Outpost
             </div>
             <p className="text-muted-foreground text-sm">
               The thumbnail editor for small creators who want to look like
@@ -2745,7 +2745,7 @@ function Footer() {
         </div>
         <div className="flex items-center justify-between pt-6 text-muted-foreground/60 text-xs">
           <div>© 2026 A Major. All rights reserved.</div>
-          <div>backstage.amajor.ai</div>
+          <div>outpost.amajor.ai</div>
         </div>
       </div>
     </footer>

@@ -138,7 +138,7 @@ async fn handle_oauth_callback(
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Connected — Backstage</title>
+<title>Connected — Outpost</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -186,7 +186,7 @@ async fn handle_oauth_callback(
     <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
   </div>
   <div>
-    <h1>Connected to Backstage!</h1>
+    <h1>Connected to Outpost!</h1>
     <p style="margin-top:6px">You can close this tab and return to the app.</p>
   </div>
 </div>

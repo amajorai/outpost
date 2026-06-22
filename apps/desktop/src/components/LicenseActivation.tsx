@@ -205,7 +205,7 @@ export function LicenseActivation({ onBack }: { onBack?: () => void }) {
               </div>
 
               <div>
-                <h1 className="font-medium text-xl">Activate Backstage</h1>
+                <h1 className="font-medium text-xl">Activate Outpost</h1>
                 <p className="font-medium text-muted-foreground text-xl">
                   Enter your license key to get started
                 </p>

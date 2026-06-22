@@ -1,4 +1,4 @@
-import "@backstage/env/web";
+import "@outpost/env/web";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {

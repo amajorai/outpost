@@ -18,7 +18,7 @@ import { SplitReveal } from "./motion-primitives";
 export const CHECKOUT_URL =
   process.env.NEXT_PUBLIC_POLAR_CHECKOUT_URL ??
   "https://sandbox-api.polar.sh/v1/checkout-links/polar_cl_aGUui9yb3Gb4ebQMX2FFj13h4kBHGKrVW29fM0Nqp2m/redirect";
-export const GITHUB_URL = "https://github.com/amajorai/backstage";
+export const GITHUB_URL = "https://github.com/amajorai/outpost";
 
 const TRAILING_ZERO_RE = /\.0$/;
 
@@ -33,7 +33,7 @@ export function useGitHubData() {
   const [stars, setStars] = useState<string>("—");
 
   useEffect(() => {
-    fetch("https://api.github.com/repos/amajorai/backstage")
+    fetch("https://api.github.com/repos/amajorai/outpost")
       .then((r) => r.json())
       .then((d) => {
         if (typeof d.stargazers_count === "number") {
@@ -315,7 +315,7 @@ export function Nav({ stars }: { stars: string }) {
               size={18}
               strokeWidth={3}
             />
-            Backstage
+            Outpost
           </a>
           <div className="ml-1 flex items-center gap-0.5">
             {navLinks.map(([href, label]) => (
@@ -390,7 +390,7 @@ export function Nav({ stars }: { stars: string }) {
               size={20}
               strokeWidth={3}
             />
-            <span>Backstage</span>
+            <span>Outpost</span>
           </a>
           <a
             className="font-medium text-[10px] text-white/60 tracking-wide no-underline"
@@ -442,7 +442,7 @@ export function Footer() {
                 size={18}
                 strokeWidth={2.5}
               />
-              Backstage
+              Outpost
             </div>
             <p className="text-sm text-white/40">
               The thumbnail studio for small creators who want to look like
@@ -522,7 +522,7 @@ export function Footer() {
         </div>
         <div className="flex items-center justify-between pt-6 font-mono text-[11px] text-white/25">
           <div>© 2026 A Major. All rights reserved.</div>
-          <div>backstage.amajor.ai</div>
+          <div>outpost.amajor.ai</div>
         </div>
       </div>
     </footer>

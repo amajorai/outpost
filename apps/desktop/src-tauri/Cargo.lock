@@ -464,7 +464,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "backstage"
+name = "outpost"
 version = "1.5.3"
 dependencies = [
  "aes-gcm",
