@@ -1,0 +1,296 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+    branches:
+      - "release/v*"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    name: Release (${{ matrix.name }})
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            args: --target aarch64-apple-darwin
+            name: macOS (Apple Silicon)
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+            # No ort/ONNX Runtime prebuilt exists for x86_64-apple-darwin, so
+            # exclude the local-embeddings feature on Intel; the app falls back
+            # to Gemini embeddings at runtime. `tauri build` has no
+            # --no-default-features flag, so forward it to cargo after `--`
+            # (same passthrough form the dev script uses for --features).
+            args: --target x86_64-apple-darwin -- --no-default-features
+            name: macOS (Intel)
+          - platform: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            args: ""
+            name: Linux
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            args: ""
+            name: Windows
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version tag
+        id: version
+        shell: bash
+        run: |
+          REF="$GITHUB_REF_NAME"
+          if [[ "$REF" == release/* ]]; then
+            VERSION="${REF#release/}"
+          else
+            VERSION="$REF"
+          fi
+          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ contains(matrix.platform, 'macos') && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Install Linux dependencies
+        if: matrix.name == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libgtk-3-dev
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: Install dependencies
+        run: bun install
+        working-directory: apps/desktop
+
+      - name: Get previous tag
+        id: prev_tag
+        shell: bash
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+
+      - name: Get tag message
+        id: tag_message
+        shell: bash
+        run: |
+          git fetch --tags --force
+          TAG_MSG=$(git for-each-ref refs/tags/${{ steps.version.outputs.tag }} --format='%(contents:subject)' 2>/dev/null | head -1)
+          echo "message=$TAG_MSG" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.tag }}"
+          PREV_TAG="${{ steps.prev_tag.outputs.prev_tag }}"
+          REPO="${{ github.repository }}"
+
+          # Get commits
+          if [ -n "$PREV_TAG" ]; then
+            COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"%s|%h|%H")
+          else
+            COMMITS=$(git log --pretty=format:"%s|%h|%H")
+          fi
+
+          # Initialize sections
+          FEATURES=""
+          FIXES=""
+          CHORES=""
+          OTHER=""
+
+          # Parse commits into sections
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            
+            MSG=$(echo "$line" | cut -d'|' -f1)
+            SHORT_HASH=$(echo "$line" | cut -d'|' -f2)
+            FULL_HASH=$(echo "$line" | cut -d'|' -f3)
+            
+            LINK="- ${MSG} ([${SHORT_HASH}](https://github.com/${REPO}/commit/${FULL_HASH}))"
+            
+            if [[ "$MSG" == feat:* ]] || [[ "$MSG" == feat\(* ]]; then
+              FEATURES="${FEATURES}${LINK}"$'\n'
+            elif [[ "$MSG" == fix:* ]] || [[ "$MSG" == fix\(* ]]; then
+              FIXES="${FIXES}${LINK}"$'\n'
+            elif [[ "$MSG" == chore:* ]] || [[ "$MSG" == chore\(* ]] || [[ "$MSG" == refactor:* ]] || [[ "$MSG" == refactor\(* ]]; then
+              CHORES="${CHORES}${LINK}"$'\n'
+            else
+              OTHER="${OTHER}${LINK}"$'\n'
+            fi
+          done <<< "$COMMITS"
+
+          # Build changelog using heredoc for multiline output
+          {
+            echo "body<<EOF"
+            echo "## What's Changed"
+            echo ""
+            
+            if [ -n "$FEATURES" ]; then
+              echo "### Features"
+              echo ""
+              echo "$FEATURES"
+            fi
+            
+            if [ -n "$FIXES" ]; then
+              echo "### Bug Fixes"
+              echo ""
+              echo "$FIXES"
+            fi
+            
+            if [ -n "$OTHER" ]; then
+              echo "### Other Changes"
+              echo ""
+              echo "$OTHER"
+            fi
+            
+            if [ -n "$CHORES" ]; then
+              echo "### Maintenance"
+              echo ""
+              echo "$CHORES"
+            fi
+            
+            if [ -n "$PREV_TAG" ]; then
+              echo ""
+              echo "**Full Changelog**: https://github.com/${REPO}/compare/${PREV_TAG}...${VERSION}"
+            fi
+            
+            echo ""
+            echo "**All Commits**: https://github.com/${REPO}/commits/${VERSION}/"
+            
+            echo ""
+            echo "## Downloads"
+            echo ""
+            echo "| Platform | Download |"
+            echo "|----------|-----------|"
+            echo "| macOS (Apple Silicon) | \`.dmg\` (arm64) |"
+            echo "| macOS (Intel) | \`.dmg\` (x64) |"
+            echo "| Windows | \`.exe\` / \`.msi\` installer |"
+            echo "| Linux | \`.deb\` / \`.AppImage\` |"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Select bundles
+        id: bundles
+        shell: bash
+        run: |
+          # WiX MSI rejects non-numeric semver pre-release identifiers (e.g.
+          # "1.4.0-beta.1" fails with "pre-release identifier ... must be
+          # numeric-only"). So pre-release tags build the NSIS .exe only on
+          # Windows; stable tags still produce both .msi and .exe. Signed
+          # updater artifacts come from NSIS either way
+          # (bundle.createUpdaterArtifacts = true).
+          EXTRA=""
+          case "${{ matrix.name }}|${{ steps.version.outputs.tag }}" in
+            Windows*beta*|Windows*alpha*|Windows*rc*|Windows*nightly*)
+              EXTRA=" --bundles nsis" ;;
+          esac
+          echo "extra=$EXTRA" >> "$GITHUB_OUTPUT"
+
+      - name: Build and release
+        id: tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          VITE_POLAR_ORGANIZATION_ID: ${{ secrets.VITE_POLAR_ORGANIZATION_ID }}
+          VITE_POLAR_ORG_SLUG: ${{ secrets.VITE_POLAR_ORG_SLUG }}
+          VITE_POLAR_PURCHASE_URL: ${{ secrets.VITE_POLAR_PURCHASE_URL }}
+          VITE_POLAR_CUSTOMER_PORTAL_URL: ${{ secrets.VITE_POLAR_CUSTOMER_PORTAL_URL }}
+        with:
+          projectPath: apps/desktop
+          tauriScript: bunx tauri
+          tagName: ${{ steps.version.outputs.tag }}
+          releaseName: "${{ steps.version.outputs.tag }}${{ steps.tag_message.outputs.message && format(' - {0}', steps.tag_message.outputs.message) || '' }}"
+          releaseBody: ${{ steps.changelog.outputs.body }}
+          releaseDraft: false
+          prerelease: ${{ contains(steps.version.outputs.tag, 'beta') || contains(steps.version.outputs.tag, 'alpha') || contains(steps.version.outputs.tag, 'nightly') || contains(steps.version.outputs.tag, 'rc') }}
+          includeUpdaterJson: true
+          args: ${{ matrix.args }}${{ steps.bundles.outputs.extra }}
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          cd apps/desktop/src-tauri/target
+
+          # Find the bundle directory based on target
+          if [ -n "${{ matrix.target }}" ]; then
+            BUNDLE_DIR="${{ matrix.target }}/release/bundle"
+          else
+            BUNDLE_DIR="release/bundle"
+          fi
+
+          echo "Looking for artifacts in $BUNDLE_DIR"
+
+          if [ -d "$BUNDLE_DIR" ]; then
+            cd "$BUNDLE_DIR"
+            
+            # Generate checksums for all release files
+            find . -type f \( -name "*.dmg" -o -name "*.exe" -o -name "*.msi" -o -name "*.deb" -o -name "*.AppImage" -o -name "*.tar.gz" \) | while read file; do
+              filename=$(basename "$file")
+              
+              # Generate SHA256
+              if command -v sha256sum &> /dev/null; then
+                sha256sum "$file" | cut -d' ' -f1 > "${file}.sha256"
+              elif command -v shasum &> /dev/null; then
+                shasum -a 256 "$file" | cut -d' ' -f1 > "${file}.sha256"
+              fi
+              
+              echo "Generated checksum for $filename"
+            done
+            
+            # List generated files
+            find . -name "*.sha256" -type f
+          fi
+
+      - name: Upload checksums
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd apps/desktop/src-tauri/target
+
+          if [ -n "${{ matrix.target }}" ]; then
+            BUNDLE_DIR="${{ matrix.target }}/release/bundle"
+          else
+            BUNDLE_DIR="release/bundle"
+          fi
+
+          if [ -d "$BUNDLE_DIR" ]; then
+            cd "$BUNDLE_DIR"
+            
+            # Upload all checksum files
+            find . -name "*.sha256" -type f | while read file; do
+              filename=$(basename "$file")
+              echo "Uploading $filename"
+              gh release upload "${{ steps.version.outputs.tag }}" "$file" --clobber || true
+            done
+          fi

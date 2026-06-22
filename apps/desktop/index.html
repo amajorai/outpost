@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>youtube.pub</title>
+    <style>
+    #feedback-button {
+      display: none !important;
+    }
+    </style>
+    <script>
+    "use strict";
+    // Suppress WebView2 native context menu so Radix ContextMenu can handle right-clicks.
+    // Must run before React so the capture listener is always registered.
+    document.addEventListener(
+      "contextmenu",
+      (e) => {
+        e.preventDefault();
+      },
+      true
+    );
+    // Suppress middle-click autoscroll cursor in WebView2.
+    document.addEventListener(
+      "mousedown",
+      (e) => {
+        if (e.button === 1) e.preventDefault();
+      },
+      true
+    );
+    document.addEventListener(
+      "auxclick",
+      (e) => {
+        if (e.button === 1) e.preventDefault();
+      },
+      true
+    );
+    </script>
+    <script>
+    "use strict";
+    window.$ujq = window.$ujq || [];
+    window.uj =
+      window.uj ||
+      new Proxy(
+        {},
+        {
+          get:
+            (_, p) =>
+            (...a) =>
+              window.$ujq.push([p, ...a]),
+        }
+      );
+    document.head.appendChild(
+      Object.assign(document.createElement("script"), {
+        src: "https://cdn.userjot.com/sdk/v2/uj.js",
+        type: "module",
+        async: !0,
+      })
+    );
+    </script>
+    <script>
+    "use strict";
+    window.uj.init("cmp9kk20o07w50inhwx9hso2u", {
+      widget: true,
+      position: "right",
+      theme: "auto",
+      trigger: "custom",
+    });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

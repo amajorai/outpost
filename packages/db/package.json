@@ -1,0 +1,23 @@
+{
+  "name": "@backstage/db",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "devDependencies": {
+    "typescript": "^5",
+    "@backstage/config": "workspace:*"
+  },
+  "dependencies": {
+    "mongoose": "^8.14.0",
+    "dotenv": "catalog:",
+    "zod": "catalog:",
+    "@backstage/env": "workspace:*"
+  }
+}
