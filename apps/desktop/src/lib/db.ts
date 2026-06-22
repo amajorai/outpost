@@ -42,7 +42,9 @@ async function safeAddColumn(database: Database, sql: string): Promise<void> {
     await database.execute(sql);
   } catch (err) {
     const msg = String(err).toLowerCase();
-    if (msg.includes("duplicate column name")) return;
+    if (msg.includes("duplicate column name")) {
+      return;
+    }
     throw err;
   }
 }
@@ -312,7 +314,9 @@ async function runMigrations(database: Database): Promise<void> {
   );
   const current = rows[0]?.user_version ?? 0;
 
-  if (current >= TARGET_SCHEMA_VERSION) return;
+  if (current >= TARGET_SCHEMA_VERSION) {
+    return;
+  }
 
   logger.info(
     { from: current, to: TARGET_SCHEMA_VERSION },
@@ -368,8 +372,12 @@ async function initDb(): Promise<Database> {
 }
 
 export async function getDb(): Promise<Database> {
-  if (db) return db;
-  if (!dbInitPromise) dbInitPromise = initDb();
+  if (db) {
+    return db;
+  }
+  if (!dbInitPromise) {
+    dbInitPromise = initDb();
+  }
   db = await dbInitPromise;
   return db;
 }
