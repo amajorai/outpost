@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { LicenseActivation } from "@/components/LicenseActivation";
-import { TitleBar } from "@/components/TitleBar";
+import { AppShell } from "@/components/nav/app-shell";
 import { Toaster } from "@/components/ui/sonner";
 import { VersionGateModal } from "@/components/VersionGateModal";
 import { useAppUpdater } from "@/hooks/use-app-updater";
@@ -10,6 +10,7 @@ import { runMigrations } from "@/lib/migration";
 import { initPostHog } from "@/lib/posthog";
 import { useAppSettingsStore } from "@/stores/use-app-settings-store";
 import { useLicenseStore } from "@/stores/use-license-store";
+import { useNavigationStore } from "@/stores/use-navigation-store";
 
 function UpdateChecker() {
   useAppUpdater();
@@ -39,6 +40,9 @@ export default function App() {
   const { loadSettings, isInitialLoadDone, analyticsEnabled, loggingEnabled } =
     useAppSettingsStore();
 
+  const loadNavigation = useNavigationStore((s) => s.loadNavigation);
+  const navInitialLoadDone = useNavigationStore((s) => s.isInitialLoadDone);
+
   useEffect(() => {
     // App-data migration must finish first — it moves files from the old
     // `pub.youtube.desktop` appdata dir to the current one. Reading the
@@ -52,8 +56,9 @@ export default function App() {
       }
       loadStoredLicense();
       loadSettings();
+      loadNavigation();
     })();
-  }, [loadStoredLicense, loadSettings]);
+  }, [loadStoredLicense, loadSettings, loadNavigation]);
 
   useEffect(() => {
     if (!isInitialLoadDone) {
@@ -64,7 +69,8 @@ export default function App() {
   }, [isInitialLoadDone, analyticsEnabled, loggingEnabled]);
 
   const showInitialLoading =
-    !isInitialLoadDone || (isValidating && !isValidated);
+    !(isInitialLoadDone && navInitialLoadDone) ||
+    (isValidating && !isValidated);
   if (showInitialLoading && !hasPassedInitialLoadRef.current) {
     return (
       <div className="flex h-screen items-center justify-center bg-muted">
@@ -78,11 +84,8 @@ export default function App() {
   hasPassedInitialLoadRef.current = true;
 
   return (
-    <div className="flex h-screen min-w-0 flex-1 flex-col bg-muted">
-      <TitleBar />
-      <main className="flex min-h-0 flex-1 items-center justify-center">
-        <p className="text-muted-foreground text-sm">Outpost</p>
-      </main>
+    <>
+      <AppShell />
       {licenseGateOpen && !isValidated && (
         <div className="fixed inset-0 z-[1100]">
           <LicenseActivation onBack={closeLicenseGate} />
@@ -92,6 +95,6 @@ export default function App() {
       <UpdateChecker />
       <VersionGateModal />
       <WindowBoundsManager />
-    </div>
+    </>
   );
 }
