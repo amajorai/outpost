@@ -1,11 +1,29 @@
 import Database from "@tauri-apps/plugin-sql";
 import { logger } from "@/lib/logger";
+import { DEFAULT_WORKSPACE_ID } from "@/lib/social-schema";
 
 let db: Database | null = null;
 let dbInitPromise: Promise<Database> | null = null;
 
 // Bump this whenever you add a new migration below.
-const TARGET_SCHEMA_VERSION = 9;
+const TARGET_SCHEMA_VERSION = 10;
+
+/**
+ * Pre-v10 domain tables that gain a `workspace_id` in the v10 migration.
+ * Each existing row is back-filled to the default workspace.
+ */
+const V10_LEGACY_DOMAIN_TABLES = [
+  "thumbnails",
+  "trash",
+  "project_revisions",
+  "folders",
+  "archive_folders",
+  "ai_projects",
+  "yt_favourites",
+  "yt_collections",
+  "yt_collection_items",
+  "yt_thumbnail_history",
+] as const;
 
 type MigrationFn = (database: Database) => Promise<void>;
 
@@ -174,6 +192,117 @@ const migrations: Record<number, MigrationFn> = {
     await database.execute(
       "CREATE INDEX IF NOT EXISTS idx_yt_thumbnail_history_videoId ON yt_thumbnail_history(videoId, uploadedAt)"
     );
+  },
+  10: async (database) => {
+    // Multi-tenant posting foundation. New tables carry workspace_id NOT NULL
+    // by design; legacy tables get a nullable workspace_id (you can't add a
+    // NOT NULL column without a default to an already-populated table) and are
+    // then back-filled to the seeded default workspace.
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS workspaces (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        createdAt INTEGER NOT NULL
+      )
+    `);
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS social_accounts (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        platform TEXT NOT NULL,
+        account_label TEXT NOT NULL,
+        external_id TEXT,
+        connected INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_social_accounts_workspace ON social_accounts(workspace_id)"
+    );
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS drafts (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        body TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_drafts_workspace ON drafts(workspace_id)"
+    );
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS scheduled_posts (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        draft_id TEXT,
+        scheduled_for INTEGER NOT NULL,
+        status TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_scheduled_posts_workspace ON scheduled_posts(workspace_id, scheduled_for)"
+    );
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS post_targets (
+        id TEXT PRIMARY KEY,
+        scheduled_post_id TEXT NOT NULL,
+        social_account_id TEXT NOT NULL,
+        platform TEXT NOT NULL,
+        variant_body TEXT,
+        status TEXT NOT NULL
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_post_targets_scheduled_post ON post_targets(scheduled_post_id)"
+    );
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS post_history (
+        id TEXT PRIMARY KEY,
+        post_target_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        remote_url TEXT,
+        remote_id TEXT,
+        error TEXT,
+        published_at INTEGER
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_post_history_post_target ON post_history(post_target_id)"
+    );
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS templates (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        body TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_templates_workspace ON templates(workspace_id)"
+    );
+
+    // Seed the default workspace before back-filling so back-filled rows point
+    // at a row that exists. OR IGNORE keeps this safe on the bootstrap re-run
+    // path where the workspace may already be present.
+    await database.execute(
+      "INSERT OR IGNORE INTO workspaces (id, name, createdAt) VALUES ($1, $2, $3)",
+      [DEFAULT_WORKSPACE_ID, "Default", Date.now()]
+    );
+
+    // Add workspace_id to every legacy domain table and back-fill existing rows.
+    for (const table of V10_LEGACY_DOMAIN_TABLES) {
+      await safeAddColumn(
+        database,
+        `ALTER TABLE ${table} ADD COLUMN workspace_id TEXT`
+      );
+      await database.execute(
+        `UPDATE ${table} SET workspace_id = $1 WHERE workspace_id IS NULL`,
+        [DEFAULT_WORKSPACE_ID]
+      );
+    }
   },
 };
 
