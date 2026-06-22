@@ -81,7 +81,7 @@ export function LicenseActivation({ onBack }: { onBack?: () => void }) {
       <div
         className="relative flex h-10 shrink-0 items-center pr-[148px] pl-[96px]"
         data-tauri-drag-region=""
-      ></div>
+      />
 
       {/* Content card */}
       <div className="mx-1 flex flex-1 flex-col overflow-hidden rounded-xl border-2 border-border bg-background">
