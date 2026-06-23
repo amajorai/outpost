@@ -269,9 +269,10 @@ export interface InboxItem {
  * A post-performance feed item (U20 creates the table + type; U21 consumes it).
  *
  * One row per published post the app is tracking, holding its latest engagement
- * counts. No repo or UI reads this in U20 — it exists so the v11 -> v12
- * migration ships the schema U21 will build on. The matching DDL lives in the
- * v11 -> v12 migration in `lib/db.ts`.
+ * counts. The table + base columns ship in the v11 -> v12 migration (U20); the
+ * `shares` / `engagementFetchedAt` columns and the dedupe UNIQUE index that
+ * makes upsert-on-refresh possible are added in the v13 -> v14 migration (U21).
+ * Both migrations live in `lib/db.ts`.
  */
 export interface ActivityItem {
   id: string;
@@ -284,6 +285,9 @@ export interface ActivityItem {
   text: string | null;
   likes: number;
   comments: number;
+  shares: number;
   views: number;
+  /** Unix epoch millis the engagement counts were last read, when known. */
+  engagementFetchedAt: number | null;
   publishedAt: number | null;
 }

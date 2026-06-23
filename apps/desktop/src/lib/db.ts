@@ -6,7 +6,7 @@ let db: Database | null = null;
 let dbInitPromise: Promise<Database> | null = null;
 
 // Bump this whenever you add a new migration below.
-const TARGET_SCHEMA_VERSION = 13;
+const TARGET_SCHEMA_VERSION = 14;
 
 /**
  * Pre-v10 domain tables that gain a `workspace_id` in the v10 migration.
@@ -416,6 +416,33 @@ const migrations: Record<number, MigrationFn> = {
     `);
     await database.execute(
       "CREATE INDEX IF NOT EXISTS idx_voice_profile_workspace ON voice_profile(workspace_id)"
+    );
+  },
+  14: async (database) => {
+    // Activity feed (U21). The `activity_items` table was created in v12 (U20)
+    // but never written to. U21 aggregates published posts across accounts and
+    // upserts their latest engagement counts, keyed on
+    // (workspace_id, social_account_id, post_remote_id) so a re-refresh updates
+    // a post's metrics in place rather than duplicating it. v12's DDL has no
+    // such UNIQUE constraint, so we add one here (a new migration, never an edit
+    // to the shipped v12 block — per the SQLite versioning contract). Safe
+    // because no code has ever written to the table, so there are no duplicate
+    // rows to violate the new index.
+    //
+    // We also add `shares` and `engagement_fetched_at` so the row can carry the
+    // remaining fields the provider's `EngagementCounts` returns. Additive
+    // columns via safeAddColumn keep the bootstrap-from-untracked-install path
+    // forward-safe.
+    await safeAddColumn(
+      database,
+      "ALTER TABLE activity_items ADD COLUMN shares INTEGER NOT NULL DEFAULT 0"
+    );
+    await safeAddColumn(
+      database,
+      "ALTER TABLE activity_items ADD COLUMN engagement_fetched_at INTEGER"
+    );
+    await database.execute(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_activity_items_dedupe ON activity_items(workspace_id, social_account_id, post_remote_id)"
     );
   },
 };

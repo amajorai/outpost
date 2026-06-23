@@ -108,3 +108,57 @@ export async function listPostHistoryForTarget(
   );
   return rows.map(mapRow);
 }
+
+/**
+ * One successfully-published target for an account, with everything the
+ * activity feed (U21) needs to read its engagement: the remote id/url to query
+ * the provider with, the platform, the per-target body override (the only local
+ * text we have, often null), and when it published.
+ */
+export interface PublishedTarget {
+  platform: string;
+  remoteId: string;
+  remoteUrl: string | null;
+  variantBody: string | null;
+  publishedAt: number | null;
+}
+
+/** Row shape for the published-targets join. */
+interface PublishedTargetRow {
+  platform: string;
+  remote_id: string;
+  remote_url: string | null;
+  variant_body: string | null;
+  published_at: number | null;
+}
+
+/**
+ * List every post successfully published to one social account, newest first.
+ *
+ * Providers expose `readEngagement(ref)` but no "list my posts", so the set of
+ * trackable posts must come from what Outpost published locally. A `published`
+ * `post_history` row with a non-null `remote_id` is exactly that: a post we can
+ * re-query. We join `post_targets` for the account + platform, scoping by the
+ * target's `social_account_id` (the account itself is already workspace-scoped,
+ * so no `scheduled_posts` join is needed).
+ */
+export async function listPublishedTargetsForAccount(
+  socialAccountId: string
+): Promise<PublishedTarget[]> {
+  const db = await getDb();
+  const rows = await db.select<PublishedTargetRow[]>(
+    `SELECT pt.platform AS platform, ph.remote_id AS remote_id, ph.remote_url AS remote_url, pt.variant_body AS variant_body, ph.published_at AS published_at
+     FROM post_history ph
+     JOIN post_targets pt ON pt.id = ph.post_target_id
+     WHERE pt.social_account_id = $1 AND ph.status = 'published' AND ph.remote_id IS NOT NULL
+     ORDER BY ph.published_at DESC`,
+    [socialAccountId]
+  );
+  return rows.map((row) => ({
+    platform: row.platform,
+    remoteId: row.remote_id,
+    remoteUrl: row.remote_url,
+    variantBody: row.variant_body,
+    publishedAt: row.published_at,
+  }));
+}

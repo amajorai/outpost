@@ -1,3 +1,4 @@
+import { ActivityPanel } from "@/components/activity/activity-panel";
 import { CalendarPanel } from "@/components/calendar/calendar-panel";
 import { ComposerPanel } from "@/components/compose/composer-panel";
 import { InboxPanel } from "@/components/inbox/inbox-panel";
@@ -30,6 +31,10 @@ export function SectionPanel({ section }: SectionPanelProps) {
 
   if (section === "inbox") {
     return <InboxPanel />;
+  }
+
+  if (section === "activity") {
+    return <ActivityPanel />;
   }
 
   if (section === "templates") {
