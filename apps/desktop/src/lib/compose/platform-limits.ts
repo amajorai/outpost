@@ -15,14 +15,30 @@
 
 import type { Platform } from "@/lib/providers";
 
+/**
+ * How a platform interprets a multi-segment post (U12):
+ * - `thread`: each segment is a reply chained to the previous (X-style).
+ * - `carousel`: segments are slides in one post (IG/LinkedIn-style).
+ * - `none`: no native multi-segment; extra segments degrade to the first.
+ */
+export type SegmentStyle = "thread" | "carousel" | "none";
+
 /** The composition constraints for a single platform. */
 export interface PlatformLimits {
   /** Maximum number of characters allowed in the post body. */
   maxChars: number;
   /** MIME type prefixes the platform accepts, e.g. "image/", "video/". */
   allowedMimePrefixes: readonly string[];
-  /** Maximum number of media attachments per post. */
+  /** Maximum number of media attachments per post (or per segment). */
   maxMedia: number;
+  /** How this platform renders/publishes multiple segments. */
+  segmentStyle: SegmentStyle;
+  /**
+   * Maximum number of segments the platform accepts. For `none` this is 1
+   * (extra segments degrade to the first). For threads/carousels it's the
+   * native cap.
+   */
+  maxSegments: number;
 }
 
 /** A permissive fallback for any platform not explicitly listed. */
@@ -30,6 +46,8 @@ export const DEFAULT_PLATFORM_LIMITS: PlatformLimits = {
   maxChars: 5000,
   allowedMimePrefixes: ["image/", "video/"],
   maxMedia: 10,
+  segmentStyle: "none",
+  maxSegments: 1,
 };
 
 const IMAGE_AND_VIDEO = ["image/", "video/"] as const;
@@ -38,34 +56,68 @@ const VIDEO_ONLY = ["video/"] as const;
 
 /** Per-platform limits. Keep keys in sync with the `Platform` union. */
 export const PLATFORM_LIMITS: Record<Platform, PlatformLimits> = {
-  x: { maxChars: 280, allowedMimePrefixes: IMAGE_AND_VIDEO, maxMedia: 4 },
+  x: {
+    maxChars: 280,
+    allowedMimePrefixes: IMAGE_AND_VIDEO,
+    maxMedia: 4,
+    segmentStyle: "thread",
+    maxSegments: 25,
+  },
   instagram: {
     maxChars: 2200,
     allowedMimePrefixes: IMAGE_AND_VIDEO,
     maxMedia: 10,
+    segmentStyle: "carousel",
+    maxSegments: 10,
   },
-  tiktok: { maxChars: 2200, allowedMimePrefixes: VIDEO_ONLY, maxMedia: 1 },
-  youtube: { maxChars: 5000, allowedMimePrefixes: VIDEO_ONLY, maxMedia: 1 },
+  tiktok: {
+    maxChars: 2200,
+    allowedMimePrefixes: VIDEO_ONLY,
+    maxMedia: 1,
+    segmentStyle: "none",
+    maxSegments: 1,
+  },
+  youtube: {
+    maxChars: 5000,
+    allowedMimePrefixes: VIDEO_ONLY,
+    maxMedia: 1,
+    segmentStyle: "none",
+    maxSegments: 1,
+  },
   linkedin: {
     maxChars: 3000,
     allowedMimePrefixes: IMAGE_AND_VIDEO,
     maxMedia: 9,
+    segmentStyle: "carousel",
+    maxSegments: 20,
   },
   reddit: {
     maxChars: 40_000,
     allowedMimePrefixes: IMAGE_AND_VIDEO,
     maxMedia: 1,
+    segmentStyle: "none",
+    maxSegments: 1,
   },
   facebook: {
     maxChars: 63_206,
     allowedMimePrefixes: IMAGE_AND_VIDEO,
     maxMedia: 10,
+    segmentStyle: "none",
+    maxSegments: 1,
   },
-  bluesky: { maxChars: 300, allowedMimePrefixes: IMAGE_ONLY, maxMedia: 4 },
+  bluesky: {
+    maxChars: 300,
+    allowedMimePrefixes: IMAGE_ONLY,
+    maxMedia: 4,
+    segmentStyle: "thread",
+    maxSegments: 25,
+  },
   threads: {
     maxChars: 500,
     allowedMimePrefixes: IMAGE_AND_VIDEO,
     maxMedia: 10,
+    segmentStyle: "thread",
+    maxSegments: 25,
   },
 };
 
@@ -122,6 +174,57 @@ export function validateForPlatform(
     );
     if (!allowed) {
       return `Does not accept "${item.name}" (${item.mimeType || "unknown type"})`;
+    }
+  }
+
+  return null;
+}
+
+/** One ordered segment of a multi-segment post, as the composer holds it. */
+export interface ComposeSegment {
+  text: string;
+  media: MediaAttachment[];
+}
+
+/**
+ * Validate an ordered list of segments against one platform (U12). Single-segment
+ * posts reduce to {@link validateForPlatform} on the first segment, so there is
+ * no behavior change for the common case.
+ *
+ * For platforms that don't support multiple segments (`segmentStyle: "none"`)
+ * only the first segment would publish, so we only validate that one — the extra
+ * segments are explicitly a degrade, not an error. For thread/carousel platforms
+ * every segment is validated individually and the segment count is capped.
+ */
+export function validateSegmentsForPlatform(
+  platform: string,
+  segments: readonly ComposeSegment[]
+): ValidationError {
+  const limits = getPlatformLimits(platform);
+
+  if (segments.length === 0) {
+    return "Post is empty";
+  }
+
+  // Platforms with no multi-segment support only ever publish the first segment.
+  if (limits.segmentStyle === "none") {
+    return validateForPlatform(platform, segments[0].text, segments[0].media);
+  }
+
+  if (segments.length > limits.maxSegments) {
+    const noun = limits.segmentStyle === "thread" ? "posts" : "slides";
+    return `Allows at most ${limits.maxSegments} ${noun}`;
+  }
+
+  for (let i = 0; i < segments.length; i++) {
+    const reason = validateForPlatform(
+      platform,
+      segments[i].text,
+      segments[i].media
+    );
+    if (reason) {
+      const noun = limits.segmentStyle === "thread" ? "Post" : "Slide";
+      return `${noun} ${i + 1}: ${reason}`;
     }
   }
 

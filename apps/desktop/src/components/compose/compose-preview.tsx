@@ -1,9 +1,15 @@
 /**
- * Live per-platform preview for the composer (U8).
+ * Live per-platform preview for the composer (U8, extended for threads/carousels
+ * in U12).
  *
  * For each platform among the selected accounts, renders a card showing the post
- * text and media as it would appear, the platform's character/format limits, the
- * live character count, and any validation error from the capability/limit rules.
+ * as it would appear. The layout is derived from the platform's `segmentStyle`:
+ * - `thread` (X/Bluesky/Threads): a vertical stack of connected posts.
+ * - `carousel` (IG/LinkedIn): a horizontal strip of slides.
+ * - `none`: only the first segment, since extra segments degrade away there.
+ *
+ * Each card also shows the platform's character/format limits, the live character
+ * count of the primary segment, and any validation error from the limit rules.
  */
 
 import { Badge } from "@repo/ui/badge";
@@ -11,9 +17,11 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { AlertCircle } from "lucide-react";
 import { platformLabel } from "@/components/compose/platform-meta";
 import {
+  type ComposeSegment,
   getPlatformLimits,
   type MediaAttachment,
-  validateForPlatform,
+  type SegmentStyle,
+  validateSegmentsForPlatform,
 } from "@/lib/compose/platform-limits";
 
 function PreviewMedia({ media }: { media: MediaAttachment[] }) {
@@ -46,20 +54,99 @@ function PreviewMedia({ media }: { media: MediaAttachment[] }) {
   );
 }
 
+function SegmentBody({ segment }: { segment: ComposeSegment }) {
+  return (
+    <>
+      <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+        {segment.text.trim().length > 0 ? (
+          segment.text
+        ) : (
+          <span className="text-muted-foreground italic">Nothing yet</span>
+        )}
+      </p>
+      <PreviewMedia media={segment.media} />
+    </>
+  );
+}
+
+/** A vertical, connected stack of posts — the X/Bluesky/Threads thread layout. */
+function ThreadLayout({ segments }: { segments: ComposeSegment[] }) {
+  return (
+    <ol className="flex flex-col gap-2">
+      {segments.map((segment, index) => (
+        <li
+          className="border-muted border-l-2 pl-3"
+          // biome-ignore lint/suspicious/noArrayIndexKey: ordered segment list keyed by position
+          key={index}
+        >
+          <div className="flex flex-col gap-2">
+            {segments.length > 1 && (
+              <span className="text-muted-foreground text-xs">
+                {index + 1}/{segments.length}
+              </span>
+            )}
+            <SegmentBody segment={segment} />
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** A horizontal strip of slides — the Instagram/LinkedIn carousel layout. */
+function CarouselLayout({ segments }: { segments: ComposeSegment[] }) {
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-1">
+      {segments.map((segment, index) => (
+        <div
+          className="flex w-48 shrink-0 flex-col gap-2 rounded-xl border bg-muted/40 p-3"
+          // biome-ignore lint/suspicious/noArrayIndexKey: ordered segment list keyed by position
+          key={index}
+        >
+          {segments.length > 1 && (
+            <span className="text-muted-foreground text-xs">
+              Slide {index + 1}
+            </span>
+          )}
+          <SegmentBody segment={segment} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SegmentLayout({
+  style,
+  segments,
+}: {
+  style: SegmentStyle;
+  segments: ComposeSegment[];
+}) {
+  if (style === "thread") {
+    return <ThreadLayout segments={segments} />;
+  }
+  if (style === "carousel") {
+    return <CarouselLayout segments={segments} />;
+  }
+  // `none`: only the first segment publishes, so that's all we preview.
+  return <SegmentBody segment={segments[0]} />;
+}
+
 function PlatformPreviewCard({
   platform,
   accountLabels,
-  text,
-  media,
+  segments,
 }: {
   platform: string;
   accountLabels: string[];
-  text: string;
-  media: MediaAttachment[];
+  segments: ComposeSegment[];
 }) {
   const limits = getPlatformLimits(platform);
-  const error = validateForPlatform(platform, text, media);
-  const overLimit = text.length > limits.maxChars;
+  const error = validateSegmentsForPlatform(platform, segments);
+  const primary = segments[0] ?? { text: "", media: [] };
+  const overLimit = primary.text.length > limits.maxChars;
+  const segmentNoun = limits.segmentStyle === "carousel" ? "slides" : "posts";
+  const showsMulti = limits.segmentStyle !== "none" && segments.length > 1;
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border bg-card p-4">
@@ -77,23 +164,24 @@ function PlatformPreviewCard({
               : "text-muted-foreground text-xs tabular-nums"
           }
         >
-          {text.length.toLocaleString()} / {limits.maxChars.toLocaleString()}
+          {primary.text.length.toLocaleString()} /{" "}
+          {limits.maxChars.toLocaleString()}
         </span>
       </div>
 
-      <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
-        {text.trim().length > 0 ? (
-          text
-        ) : (
-          <span className="text-muted-foreground italic">Nothing yet</span>
-        )}
-      </p>
-
-      <PreviewMedia media={media} />
+      <SegmentLayout segments={segments} style={limits.segmentStyle} />
 
       <div className="flex flex-wrap items-center gap-1.5">
+        {showsMulti && (
+          <Badge variant="secondary">
+            {segments.length} {segmentNoun}
+          </Badge>
+        )}
+        {limits.segmentStyle === "none" && segments.length > 1 && (
+          <Badge variant="secondary">First segment only</Badge>
+        )}
         <Badge variant="secondary">
-          {media.length} / {limits.maxMedia} media
+          {primary.media.length} / {limits.maxMedia} media
         </Badge>
         <Badge variant="secondary">
           {limits.allowedMimePrefixes
@@ -122,12 +210,10 @@ export interface PreviewGroup {
 
 export function ComposePreview({
   groups,
-  text,
-  media,
+  segments,
 }: {
   groups: PreviewGroup[];
-  text: string;
-  media: MediaAttachment[];
+  segments: ComposeSegment[];
 }) {
   if (groups.length === 0) {
     return (
@@ -143,9 +229,8 @@ export function ComposePreview({
         <PlatformPreviewCard
           accountLabels={group.accountLabels}
           key={group.platform}
-          media={media}
           platform={group.platform}
-          text={text}
+          segments={segments}
         />
       ))}
     </div>

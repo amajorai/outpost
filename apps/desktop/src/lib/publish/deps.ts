@@ -14,7 +14,11 @@
  */
 
 import { getProviderFor } from "@/lib/providers";
-import type { Platform, PublishMedia } from "@/lib/providers/types";
+import type {
+  Platform,
+  PublishMedia,
+  PublishSegment,
+} from "@/lib/providers/types";
 import { decodeDraftBody, getDraft } from "@/lib/repos/drafts";
 import { recordPostHistory } from "@/lib/repos/post-history";
 import {
@@ -81,10 +85,18 @@ async function resolveTargetContent(
   if (body.text.length === 0 && body.media.length === 0) {
     return null;
   }
+  // Map every segment (U12). `segments[0]` always mirrors the top-level
+  // text/media, so the top-level fields and `segments[0]` stay consistent and a
+  // provider that ignores segments still publishes the first one.
+  const segments: PublishSegment[] = body.segments.map((segment) => ({
+    text: segment.text,
+    media: toPublishMedia(segment.media),
+  }));
   return {
     text: body.text,
     media: toPublishMedia(body.media),
     account: providerAccount,
+    segments,
   };
 }
 

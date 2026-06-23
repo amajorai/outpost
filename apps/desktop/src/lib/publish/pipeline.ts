@@ -26,6 +26,7 @@ import type {
   ProviderAccount,
   PublishMedia,
   PublishResult,
+  PublishSegment,
 } from "@/lib/providers/types";
 import type {
   PostTarget,
@@ -43,6 +44,12 @@ export interface ResolvedTargetContent {
   text: string;
   media: PublishMedia[];
   account: ProviderAccount;
+  /**
+   * Ordered segments for a thread/carousel (U12). Always length >= 1 when set,
+   * with `segments[0]` mirroring `text`/`media`. Omitted for a single-segment
+   * post, in which case the provider only ever sees `text`/`media`.
+   */
+  segments?: PublishSegment[];
 }
 
 /**
@@ -128,6 +135,13 @@ async function attemptPublish(
       account: content.account,
       text: content.text,
       media: content.media.length > 0 ? content.media : undefined,
+      // Multi-segment content (U12) when the post is a thread/carousel. A
+      // single-segment post omits this so unsupported providers just see
+      // text/media. Providers that don't understand segments degrade to those.
+      segments:
+        content.segments && content.segments.length > 1
+          ? content.segments
+          : undefined,
       // Idempotency key = target id so an in-pipeline retry can't double-post:
       // a provider that honors it returns the prior remote id on the retry.
       idempotencyKey: target.id,

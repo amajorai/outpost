@@ -9,17 +9,16 @@
 
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
-import { Textarea } from "@repo/ui/textarea";
 import { CalendarClock, Loader2, Save, Send } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getSectionMeta } from "@/components/nav/sections";
-import { validateForPlatform } from "@/lib/compose/platform-limits";
+import { validateSegmentsForPlatform } from "@/lib/compose/platform-limits";
 import { useComposerStore } from "@/stores/use-composer-store";
 import { useIntegrationStore } from "@/stores/use-integration-store";
 import { ComposePreview, type PreviewGroup } from "./compose-preview";
 import { DraftsDialog } from "./drafts-dialog";
-import { MediaAttachments } from "./media-attachments";
 import { platformLabel } from "./platform-meta";
+import { SegmentEditor } from "./segment-editor";
 import { TargetPicker } from "./target-picker";
 
 /** Format a date as a `datetime-local` value (YYYY-MM-DDTHH:mm) in local time. */
@@ -40,8 +39,7 @@ function defaultScheduleValue(): string {
 export function ComposerPanel() {
   const { label, description } = getSectionMeta("compose");
 
-  const text = useComposerStore((s) => s.text);
-  const media = useComposerStore((s) => s.media);
+  const segments = useComposerStore((s) => s.segments);
   const accounts = useComposerStore((s) => s.accounts);
   const selectedAccountIds = useComposerStore((s) => s.selectedAccountIds);
   const isSubmitting = useComposerStore((s) => s.isSubmitting);
@@ -50,6 +48,9 @@ export function ComposerPanel() {
   const setText = useComposerStore((s) => s.setText);
   const addMedia = useComposerStore((s) => s.addMedia);
   const removeMedia = useComposerStore((s) => s.removeMedia);
+  const addSegment = useComposerStore((s) => s.addSegment);
+  const removeSegment = useComposerStore((s) => s.removeSegment);
+  const moveSegment = useComposerStore((s) => s.moveSegment);
   const toggleAccount = useComposerStore((s) => s.toggleAccount);
   const save = useComposerStore((s) => s.save);
   const schedule = useComposerStore((s) => s.schedule);
@@ -104,13 +105,13 @@ export function ComposerPanel() {
         continue;
       }
       seen.add(account.platform);
-      const reason = validateForPlatform(account.platform, text, media);
+      const reason = validateSegmentsForPlatform(account.platform, segments);
       if (reason) {
         return `${platformLabel(account.platform)}: ${reason}`;
       }
     }
     return null;
-  }, [selectedAccounts, text, media]);
+  }, [selectedAccounts, segments]);
 
   const canSubmit = validationError === null && !isSubmitting;
 
@@ -166,19 +167,14 @@ export function ComposerPanel() {
         <div className="grid gap-8 lg:grid-cols-2">
           {/* Editor column */}
           <div className="flex flex-col gap-5">
-            <Textarea
-              aria-label="Post text"
-              autoFocus
-              className="min-h-40 text-base"
-              onChange={(e) => setText(e.target.value)}
-              placeholder="What do you want to say?"
-              value={text}
-            />
-
-            <MediaAttachments
-              media={media}
-              onAdd={addMedia}
-              onRemove={removeMedia}
+            <SegmentEditor
+              onAddMedia={addMedia}
+              onAddSegment={addSegment}
+              onMoveSegment={moveSegment}
+              onRemoveMedia={removeMedia}
+              onRemoveSegment={removeSegment}
+              onSetText={setText}
+              segments={segments}
             />
 
             <div className="flex flex-col gap-2">
@@ -195,7 +191,7 @@ export function ComposerPanel() {
           {/* Preview column */}
           <div className="flex flex-col gap-2">
             <span className="font-medium text-sm">Preview</span>
-            <ComposePreview groups={previewGroups} media={media} text={text} />
+            <ComposePreview groups={previewGroups} segments={segments} />
           </div>
         </div>
 

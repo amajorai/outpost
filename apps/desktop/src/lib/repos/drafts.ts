@@ -16,8 +16,25 @@ import type { MediaAttachment } from "@/lib/compose/platform-limits";
 import { getDb } from "@/lib/db";
 import { DEFAULT_WORKSPACE_ID, type Draft } from "@/lib/social-schema";
 
-/** Current version of the JSON {@link DraftBody} shape. */
-export const DRAFT_BODY_SCHEMA_VERSION = 1;
+/**
+ * Current version of the JSON {@link DraftBody} shape.
+ *
+ * v1: `{ text, media, accountIds }` — a single post body.
+ * v2: adds `segments` (U12), an ordered list of {text, media} so the composer
+ *     can author X threads and IG/LinkedIn carousels. The top-level `text`/
+ *     `media` are kept and always mirror `segments[0]`, so a v1 reader (and any
+ *     consumer that doesn't understand segments) degrades to the first segment
+ *     with no special-casing.
+ */
+export const DRAFT_BODY_SCHEMA_VERSION = 2;
+
+/** One ordered piece of a multi-segment post (a thread tweet / carousel slide). */
+export interface DraftSegment {
+  /** This segment's text. */
+  text: string;
+  /** This segment's media attachments, in order. */
+  media: MediaAttachment[];
+}
 
 /**
  * The decoded shape of a draft's `body` JSON. Versioned so a body written by a
@@ -25,28 +42,78 @@ export const DRAFT_BODY_SCHEMA_VERSION = 1;
  */
 export interface DraftBody {
   schemaVersion: number;
-  /** The post text. */
+  /**
+   * The first segment's text, mirrored from `segments[0]`. Kept from v1 so any
+   * consumer that doesn't understand `segments` degrades to the first segment.
+   */
   text: string;
-  /** Raw media attachments, by local path. */
+  /** The first segment's media, mirrored from `segments[0]`. */
   media: MediaAttachment[];
   /** Social account ids selected as publish targets. */
   accountIds: string[];
+  /** Ordered segments (always length >= 1). `segments[0]` mirrors text/media. */
+  segments: DraftSegment[];
 }
 
-/** Build an empty, current-version draft body. */
+/** Build an empty, current-version draft body with one empty segment. */
 export function emptyDraftBody(): DraftBody {
   return {
     schemaVersion: DRAFT_BODY_SCHEMA_VERSION,
     text: "",
     media: [],
     accountIds: [],
+    segments: [{ text: "", media: [] }],
   };
+}
+
+/** Coerce an unknown array of media into a typed {@link MediaAttachment} list. */
+function coerceMedia(value: unknown): MediaAttachment[] {
+  return Array.isArray(value) ? (value as MediaAttachment[]) : [];
+}
+
+/**
+ * Migrate a v1 body (no `segments`) to v2 by synthesizing a single segment from
+ * the top-level text/media. Per the Data Versioning Contract, a missing field is
+ * treated as the old default so absence never changes behavior.
+ */
+function migrateV1ToV2(record: Record<string, unknown>): DraftBody {
+  const text = typeof record.text === "string" ? record.text : "";
+  const media = coerceMedia(record.media);
+  const accountIds = Array.isArray(record.accountIds)
+    ? (record.accountIds as string[])
+    : [];
+  return {
+    schemaVersion: DRAFT_BODY_SCHEMA_VERSION,
+    text,
+    media,
+    accountIds,
+    segments: [{ text, media }],
+  };
+}
+
+/** Read a `segments` array from a v2 record, falling back to a single segment. */
+function readSegments(
+  record: Record<string, unknown>,
+  fallbackText: string,
+  fallbackMedia: MediaAttachment[]
+): DraftSegment[] {
+  if (!Array.isArray(record.segments) || record.segments.length === 0) {
+    return [{ text: fallbackText, media: fallbackMedia }];
+  }
+  return record.segments.map((raw) => {
+    const seg = (raw ?? {}) as Record<string, unknown>;
+    return {
+      text: typeof seg.text === "string" ? seg.text : "",
+      media: coerceMedia(seg.media),
+    };
+  });
 }
 
 /**
  * Decode a stored `body` string into a {@link DraftBody}, tolerating missing or
  * malformed fields. Treats absent fields as the empty default so a body written
- * by an earlier shape never throws. Future schema bumps add their migration here.
+ * by an earlier shape never throws. Runs the migration pipeline so a v1 body is
+ * upgraded to the current shape on read.
  */
 export function decodeDraftBody(body: string): DraftBody {
   let parsed: unknown;
@@ -59,28 +126,45 @@ export function decodeDraftBody(body: string): DraftBody {
     return emptyDraftBody();
   }
   const record = parsed as Record<string, unknown>;
-  const text = typeof record.text === "string" ? record.text : "";
-  const media = Array.isArray(record.media)
-    ? (record.media as MediaAttachment[])
-    : [];
+
+  // v1 bodies (and anything without a recognizable version) carry no segments —
+  // synthesize one from the legacy top-level fields.
+  const version =
+    typeof record.schemaVersion === "number" ? record.schemaVersion : 1;
+  if (version < 2) {
+    return migrateV1ToV2(record);
+  }
+
   const accountIds = Array.isArray(record.accountIds)
     ? (record.accountIds as string[])
     : [];
+  const topText = typeof record.text === "string" ? record.text : "";
+  const topMedia = coerceMedia(record.media);
+  const segments = readSegments(record, topText, topMedia);
   return {
     schemaVersion: DRAFT_BODY_SCHEMA_VERSION,
-    text,
-    media,
+    // Top-level always mirrors segment 0 so degrade-to-first is automatic.
+    text: segments[0].text,
+    media: segments[0].media,
     accountIds,
+    segments,
   };
 }
 
-/** Encode a {@link DraftBody} for storage, always writing the current version. */
+/**
+ * Encode a {@link DraftBody} for storage, always writing the current version.
+ * Normalizes to at least one segment and mirrors `segments[0]` into the
+ * top-level `text`/`media` so older readers degrade to the first segment.
+ */
 export function encodeDraftBody(body: DraftBody): string {
+  const segments =
+    body.segments.length > 0 ? body.segments : [{ text: "", media: [] }];
   return JSON.stringify({
     schemaVersion: DRAFT_BODY_SCHEMA_VERSION,
-    text: body.text,
-    media: body.media,
+    text: segments[0].text,
+    media: segments[0].media,
     accountIds: body.accountIds,
+    segments,
   } satisfies DraftBody);
 }
 

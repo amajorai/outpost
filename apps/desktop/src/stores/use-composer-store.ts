@@ -13,7 +13,10 @@
  */
 
 import { create } from "zustand";
-import type { MediaAttachment } from "@/lib/compose/platform-limits";
+import type {
+  ComposeSegment,
+  MediaAttachment,
+} from "@/lib/compose/platform-limits";
 import { logger } from "@/lib/logger";
 import {
   type DraftBody,
@@ -28,9 +31,16 @@ import { runSweep } from "@/lib/scheduler/scheduler";
 import type { SocialAccount } from "@/lib/social-schema";
 
 interface ComposerState {
-  /** The post body text. */
+  /**
+   * Ordered post segments (U12). Always length >= 1. `segments[0]` is the
+   * primary post; additional segments are thread tweets / carousel slides for
+   * platforms that support them. `text`/`media` below always mirror
+   * `segments[0]` so single-segment callers and the degrade path stay simple.
+   */
+  segments: ComposeSegment[];
+  /** Mirror of `segments[0].text`. */
   text: string;
-  /** Raw media attachments, in order. */
+  /** Mirror of `segments[0].media`. */
   media: MediaAttachment[];
   /** Selected target account ids. */
   selectedAccountIds: string[];
@@ -51,9 +61,18 @@ interface ComposerState {
 
   /** Load available target accounts. */
   loadAccounts: () => Promise<void>;
-  setText: (text: string) => void;
-  addMedia: (items: MediaAttachment[]) => void;
-  removeMedia: (path: string) => void;
+  /** Set the text of a segment (defaults to the first/primary segment). */
+  setText: (text: string, index?: number) => void;
+  /** Append media to a segment (defaults to the first/primary segment). */
+  addMedia: (items: MediaAttachment[], index?: number) => void;
+  /** Remove a media item by path from a segment (defaults to the first). */
+  removeMedia: (path: string, index?: number) => void;
+  /** Append a new empty segment to the end. */
+  addSegment: () => void;
+  /** Remove the segment at `index`. A no-op when only one segment remains. */
+  removeSegment: (index: number) => void;
+  /** Move the segment at `index` one slot toward "up" or "down". */
+  moveSegment: (index: number, direction: "up" | "down") => void;
   toggleAccount: (accountId: string) => void;
   reset: () => void;
   /** Save (insert or update) the current draft. */
@@ -73,13 +92,28 @@ interface ComposerState {
 function currentBody(state: ComposerState): DraftBody {
   return {
     ...emptyDraftBody(),
-    text: state.text,
-    media: state.media,
+    text: state.segments[0]?.text ?? "",
+    media: state.segments[0]?.media ?? [],
     accountIds: state.selectedAccountIds,
+    segments:
+      state.segments.length > 0 ? state.segments : [{ text: "", media: [] }],
   };
 }
 
+/**
+ * Apply a transform to the `segments` array and return the patch, keeping the
+ * top-level `text`/`media` mirrors in sync with `segments[0]`. Always normalizes
+ * to at least one segment so callers never have to guard for an empty list.
+ */
+function withSegments(
+  segments: ComposeSegment[]
+): Pick<ComposerState, "segments" | "text" | "media"> {
+  const next = segments.length > 0 ? segments : [{ text: "", media: [] }];
+  return { segments: next, text: next[0].text, media: next[0].media };
+}
+
 export const useComposerStore = create<ComposerState>()((set, get) => ({
+  segments: [{ text: "", media: [] }],
   text: "",
   media: [],
   selectedAccountIds: [],
@@ -104,19 +138,65 @@ export const useComposerStore = create<ComposerState>()((set, get) => ({
     }
   },
 
-  setText: (text) => set({ text }),
+  setText: (text, index = 0) =>
+    set((state) =>
+      withSegments(
+        state.segments.map((segment, i) =>
+          i === index ? { ...segment, text } : segment
+        )
+      )
+    ),
 
-  addMedia: (items) =>
+  addMedia: (items, index = 0) =>
+    set((state) =>
+      withSegments(
+        state.segments.map((segment, i) => {
+          if (i !== index) {
+            return segment;
+          }
+          const existing = new Set(segment.media.map((m) => m.path));
+          const next = items.filter((item) => !existing.has(item.path));
+          return { ...segment, media: [...segment.media, ...next] };
+        })
+      )
+    ),
+
+  removeMedia: (path, index = 0) =>
+    set((state) =>
+      withSegments(
+        state.segments.map((segment, i) =>
+          i === index
+            ? {
+                ...segment,
+                media: segment.media.filter((item) => item.path !== path),
+              }
+            : segment
+        )
+      )
+    ),
+
+  addSegment: () =>
+    set((state) => withSegments([...state.segments, { text: "", media: [] }])),
+
+  removeSegment: (index) =>
     set((state) => {
-      const existing = new Set(state.media.map((m) => m.path));
-      const next = items.filter((item) => !existing.has(item.path));
-      return { media: [...state.media, ...next] };
+      if (state.segments.length <= 1) {
+        return {};
+      }
+      return withSegments(state.segments.filter((_, i) => i !== index));
     }),
 
-  removeMedia: (path) =>
-    set((state) => ({
-      media: state.media.filter((item) => item.path !== path),
-    })),
+  moveSegment: (index, direction) =>
+    set((state) => {
+      const target = direction === "up" ? index - 1 : index + 1;
+      if (target < 0 || target >= state.segments.length) {
+        return {};
+      }
+      const next = [...state.segments];
+      const [moved] = next.splice(index, 1);
+      next.splice(target, 0, moved);
+      return withSegments(next);
+    }),
 
   toggleAccount: (accountId) =>
     set((state) => ({
@@ -127,6 +207,7 @@ export const useComposerStore = create<ComposerState>()((set, get) => ({
 
   reset: () =>
     set({
+      segments: [{ text: "", media: [] }],
       text: "",
       media: [],
       selectedAccountIds: [],
@@ -164,10 +245,9 @@ export const useComposerStore = create<ComposerState>()((set, get) => ({
       const body = decodeDraftBody(draft.body);
       set({
         draftId: draft.id,
-        text: body.text,
-        media: body.media,
         selectedAccountIds: body.accountIds,
         isSubmitting: false,
+        ...withSegments(body.segments),
       });
     } catch (error) {
       logger.error({ err: error }, "[Composer] Failed to load draft");

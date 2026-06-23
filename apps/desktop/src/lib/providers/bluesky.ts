@@ -82,6 +82,13 @@ interface ActiveSession extends SessionResponse {
   accessExpiresAt: number;
 }
 
+/** A com.atproto.repo.strongRef: the uri + cid of a created record. Used to
+ * chain thread replies (root/parent) in a multi-segment post (U12). */
+interface StrongRef {
+  uri: string;
+  cid: string;
+}
+
 /** The `blob` object returned by uploadBlob and embedded into a post record. */
 interface BlobRef {
   $type: "blob";
@@ -397,35 +404,70 @@ export class BlueskyProvider implements PlatformProvider {
     return { $type: "app.bsky.embed.images", images: uploaded };
   }
 
-  /** Publish a post (text + optional images) via com.atproto.repo.createRecord. */
+  /**
+   * Create a single feed post record (text + optional images), optionally as a
+   * reply chained to a root + parent. Returns the new post's strong ref.
+   */
+  private async createPostRecord(
+    session: ActiveSession,
+    segment: { text: string; media?: PublishMedia[] },
+    reply?: { root: StrongRef; parent: StrongRef }
+  ): Promise<StrongRef> {
+    const embed = await this.buildImageEmbed(session, segment.media);
+    const record: Record<string, unknown> = {
+      $type: "app.bsky.feed.post",
+      text: segment.text,
+      createdAt: new Date().toISOString(),
+    };
+    if (embed) {
+      record.embed = embed;
+    }
+    if (reply) {
+      record.reply = { root: reply.root, parent: reply.parent };
+    }
+    const result = await this.xrpcJson<{ uri: string; cid: string }>(
+      BLUESKY_PDS_BASE,
+      "com.atproto.repo.createRecord",
+      {
+        repo: session.did,
+        collection: "app.bsky.feed.post",
+        record,
+      },
+      session.accessJwt
+    );
+    return { uri: result.uri, cid: result.cid };
+  }
+
+  /**
+   * Publish a post via com.atproto.repo.createRecord. When `target.segments`
+   * holds more than one segment (U12), publishes them as a Bluesky thread: the
+   * first post is the root and each subsequent segment is a reply chained to the
+   * previous post. A single-segment target degrades to one post. The returned
+   * remote id/url point at the thread root so engagement reads stay stable.
+   */
   async publish(target: PublishTarget): Promise<PublishResult> {
     try {
       const session = await this.ensureSession();
-      const embed = await this.buildImageEmbed(session, target.media);
-      const record: Record<string, unknown> = {
-        $type: "app.bsky.feed.post",
-        text: target.text,
-        createdAt: new Date().toISOString(),
-      };
-      if (embed) {
-        record.embed = embed;
+      const segments =
+        target.segments && target.segments.length > 0
+          ? target.segments
+          : [{ text: target.text, media: target.media }];
+
+      const root = await this.createPostRecord(session, segments[0]);
+      let parent = root;
+      for (let i = 1; i < segments.length; i++) {
+        parent = await this.createPostRecord(session, segments[i], {
+          root,
+          parent,
+        });
       }
-      const result = await this.xrpcJson<{ uri: string; cid: string }>(
-        BLUESKY_PDS_BASE,
-        "com.atproto.repo.createRecord",
-        {
-          repo: session.did,
-          collection: "app.bsky.feed.post",
-          record,
-        },
-        session.accessJwt
-      );
-      // remoteId is the at-uri so readEngagement can look the post up directly.
-      const parsed = parseAtUri(result.uri);
+
+      // remoteId is the root at-uri so readEngagement looks up the thread head.
+      const parsed = parseAtUri(root.uri);
       const remoteUrl = parsed
         ? `${BLUESKY_WEB_BASE}/profile/${this.credentials.handle}/post/${parsed.rkey}`
         : undefined;
-      return { ok: true, remoteId: result.uri, remoteUrl };
+      return { ok: true, remoteId: root.uri, remoteUrl };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logger.error({ err: error }, "[Bluesky] publish failed");

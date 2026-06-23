@@ -31,6 +31,14 @@ export interface RecordedPost {
   accountId: string;
   text: string;
   mediaCount: number;
+  /**
+   * Number of segments received (U12). 1 for a single post; > 1 for a
+   * thread/carousel. Exposed so the integration check can assert the pipeline
+   * forwarded every segment.
+   */
+  segmentCount: number;
+  /** The per-segment text received, in order (length === segmentCount). */
+  segmentTexts: string[];
   remoteUrl: string;
   publishedAt: number;
 }
@@ -132,12 +140,20 @@ export class FakePlatformProvider implements PlatformProvider {
         : `fake_${target.account.platform}_${this.sequence}`;
     const remoteUrl = `https://fake.local/${target.account.platform}/${remoteId}`;
 
+    // Segments (U12): when present we record each segment's text; otherwise the
+    // single post degrades to one segment derived from the top-level text.
+    const segments = target.segments ?? [
+      { text: target.text, media: target.media },
+    ];
+
     this.posts.set(remoteId, {
       remoteId,
       platform: target.account.platform,
       accountId: target.account.id,
       text: target.text,
       mediaCount: target.media?.length ?? 0,
+      segmentCount: segments.length,
+      segmentTexts: segments.map((segment) => segment.text),
       remoteUrl,
       publishedAt: this.now(),
     });

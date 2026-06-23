@@ -45,6 +45,11 @@ function assert(condition: boolean, message: string): void {
   }
 }
 
+/** One resolvable segment for a target in the in-memory store. */
+interface StoredSegment {
+  text: string;
+}
+
 /** A minimal in-memory mirror of the DB rows the pipeline touches. */
 interface InMemoryStore {
   post: ScheduledPost;
@@ -57,6 +62,8 @@ interface InMemoryStore {
     error: string | null;
   }[];
   bodyByTargetId: Map<string, string>;
+  /** Optional multi-segment content per target (U12). */
+  segmentsByTargetId: Map<string, StoredSegment[]>;
 }
 
 /** Build in-memory deps for a single scheduled post + its targets. */
@@ -75,6 +82,11 @@ function makeDeps(
       if (text == null) {
         return Promise.resolve(null);
       }
+      const storedSegments = store.segmentsByTargetId.get(target.id);
+      const segments = storedSegments?.map((segment) => ({
+        text: segment.text,
+        media: [],
+      }));
       return Promise.resolve({
         text,
         media: [],
@@ -82,6 +94,7 @@ function makeDeps(
           id: target.socialAccountId,
           platform: target.platform as never,
         },
+        segments,
       });
     },
     getProviderFor: () => Promise.resolve(provider),
@@ -135,7 +148,13 @@ function makeStore(targetCount: number): InMemoryStore {
     });
     bodyByTargetId.set(id, `hello from target ${i}`);
   }
-  return { post, targets, history: [], bodyByTargetId };
+  return {
+    post,
+    targets,
+    history: [],
+    bodyByTargetId,
+    segmentsByTargetId: new Map(),
+  };
 }
 
 async function checkHappyPath(): Promise<void> {
@@ -313,6 +332,53 @@ async function checkEmptyBodyFails(): Promise<void> {
   );
 }
 
+async function checkMultiSegment(): Promise<void> {
+  // A thread of 3 segments should reach the provider intact (U12). The fake
+  // records segmentCount + per-segment text so we can assert the pipeline
+  // forwarded every segment, not just the first.
+  const store = makeStore(1);
+  const target = store.targets[0];
+  store.bodyByTargetId.set(target.id, "tweet one");
+  store.segmentsByTargetId.set(target.id, [
+    { text: "tweet one" },
+    { text: "tweet two" },
+    { text: "tweet three" },
+  ]);
+  const provider = new FakePlatformProvider({ now: () => 1_700_000_000_000 });
+  const deps = makeDeps(store, provider);
+
+  const outcome = await publishScheduledPost(store.post, deps);
+
+  assert(outcome.status === "published", "multi-segment post published");
+  const recorded = [...provider.posts.values()][0];
+  assert(!!recorded, "fake recorded the published post");
+  assert(
+    recorded.segmentCount === 3,
+    `fake should receive 3 segments, got ${recorded.segmentCount}`
+  );
+  assert(
+    recorded.segmentTexts.join("|") === "tweet one|tweet two|tweet three",
+    "fake should receive each segment's text in order"
+  );
+}
+
+async function checkSingleSegmentDegrades(): Promise<void> {
+  // A single-segment post must NOT carry a `segments` array to the provider, so
+  // unsupported providers see only text/media — the degrade path (U12).
+  const store = makeStore(1);
+  const target = store.targets[0];
+  store.bodyByTargetId.set(target.id, "just one");
+  store.segmentsByTargetId.set(target.id, [{ text: "just one" }]);
+  const provider = new FakePlatformProvider({ now: () => 1_700_000_000_000 });
+  const deps = makeDeps(store, provider);
+
+  await publishScheduledPost(store.post, deps);
+
+  const recorded = [...provider.posts.values()][0];
+  assert(recorded.segmentCount === 1, "single segment recorded as one post");
+  assert(recorded.text === "just one", "degraded post carries the body text");
+}
+
 async function main(): Promise<void> {
   await checkHappyPath();
   await checkRetryThenSucceed();
@@ -320,6 +386,8 @@ async function main(): Promise<void> {
   await checkPartial();
   await checkAllFail();
   await checkEmptyBodyFails();
+  await checkMultiSegment();
+  await checkSingleSegmentDegrades();
   process.stdout.write("publish pipeline check: OK\n");
 }
 

@@ -84,13 +84,28 @@ export interface PublishMedia {
   altText?: string;
 }
 
+/** One ordered segment of a multi-segment publish (thread tweet / carousel slide). */
+export interface PublishSegment {
+  /** This segment's text. */
+  text: string;
+  /** This segment's ordered media, if any. */
+  media?: PublishMedia[];
+}
+
 /** A single, fully-resolved publish request to one account. */
 export interface PublishTarget {
   account: ProviderAccount;
-  /** The post body text. */
+  /** The post body text. For a multi-segment post this mirrors `segments[0]`. */
   text: string;
-  /** Ordered media attachments, if any. */
+  /** Ordered media attachments, if any. For multi-segment, mirrors `segments[0]`. */
   media?: PublishMedia[];
+  /**
+   * Ordered segments for a thread/carousel (U12). When present, length >= 1 and
+   * `segments[0]` mirrors the top-level `text`/`media`. Providers that don't
+   * support multi-segment ignore this and publish `text`/`media` (the first
+   * segment), which is the intended degrade.
+   */
+  segments?: PublishSegment[];
   /** Idempotency key so retries don't double-post. Optional. */
   idempotencyKey?: string;
 }
