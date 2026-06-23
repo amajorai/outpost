@@ -46,6 +46,7 @@ import { toast } from "sonner";
 import { platformLabel } from "@/components/compose/platform-meta";
 import { engagementByDay, topPosts } from "@/lib/analytics/analytics";
 import { decodeDraftBody } from "@/lib/repos/drafts";
+import type { ExperimentWinner } from "@/lib/repos/experiments";
 import type { ActivityItem, Experiment } from "@/lib/social-schema";
 import {
   formatSlot,
@@ -61,6 +62,9 @@ import { useNavigationStore } from "@/stores/use-navigation-store";
 import { useWarRoomStore } from "@/stores/use-war-room-store";
 
 const NUMBER_FORMAT = new Intl.NumberFormat();
+const METRIC_FORMAT = new Intl.NumberFormat(undefined, {
+  maximumFractionDigits: 4,
+});
 const MAX_WHATS_WORKING = 3;
 /** Characters of a post body shown in a compact preview before truncating. */
 const PREVIEW_LENGTH = 120;
@@ -225,9 +229,12 @@ const EXPERIMENT_STATUS_LABEL: Record<Experiment["status"], string> = {
 /** The active-experiment status card: the newest non-draft experiment. */
 function ExperimentStatusCard({
   experiments,
+  bestWinner,
   onGoToExperiments,
 }: {
   experiments: Experiment[];
+  /** The workspace's best past winner, for the "current best" line. */
+  bestWinner: ExperimentWinner | null;
   onGoToExperiments: () => void;
 }) {
   const active = useMemo(
@@ -272,6 +279,13 @@ function ExperimentStatusCard({
         ) : (
           <p className="text-muted-foreground text-sm">No experiments yet.</p>
         )}
+        {bestWinner ? (
+          <p className="flex items-center gap-1.5 text-muted-foreground text-xs">
+            <Trophy className="size-3.5 text-amber-500" />
+            Current best: {METRIC_FORMAT.format(bestWinner.metricValue)}{" "}
+            {bestWinner.goalMetric.replace("_", " ")}
+          </p>
+        ) : null}
         <Button
           className="self-start"
           onClick={onGoToExperiments}
@@ -357,7 +371,6 @@ export function WarRoomPanel() {
   const signals = useWarRoomStore((s) => s.signals);
   const timing = useWarRoomStore((s) => s.timing);
   const isLoading = useWarRoomStore((s) => s.isLoading);
-  const hasLoaded = useWarRoomStore((s) => s.hasLoaded);
   const refresh = useWarRoomStore((s) => s.refresh);
 
   const setActiveSection = useNavigationStore((s) => s.setActiveSection);
@@ -451,8 +464,6 @@ export function WarRoomPanel() {
     await setActiveSection(strategist.section);
   }, [strategist, setActiveSection]);
 
-  const showEmpty = hasLoaded && activityItems.length === 0;
-
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-y-auto px-8 py-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
@@ -479,21 +490,12 @@ export function WarRoomPanel() {
           </Button>
         </header>
 
-        {showEmpty ? (
-          <Card>
-            <CardContent className="py-10 text-center text-muted-foreground text-sm">
-              Nothing tracked yet. Once you publish posts, the War Room fills
-              with your attention score, what's working, and crew
-              recommendations.
-            </CardContent>
-          </Card>
-        ) : null}
-
         <AttentionCard items={activityItems} score={score} />
 
         <div className="grid gap-6 md:grid-cols-2">
           <WhatsWorkingCard items={activityItems} />
           <ExperimentStatusCard
+            bestWinner={winners[0] ?? null}
             experiments={experiments}
             onGoToExperiments={() => setActiveSection("experiments")}
           />
@@ -561,10 +563,10 @@ export function WarRoomPanel() {
 /** The Copywriter card's recommendation line, keyed on what seed we have. */
 function copywriterCopy(hasWinner: boolean, seed: string): string {
   if (hasWinner) {
-    return "Re-run a proven winner with a fresh spin.";
+    return "Start from a proven winner, then reformat to each platform.";
   }
   if (seed) {
-    return "Build on your best-performing post.";
+    return "Start from your best-performing post and adapt it.";
   }
   return "Start a fresh draft.";
 }
