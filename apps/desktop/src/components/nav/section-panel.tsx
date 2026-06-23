@@ -7,6 +7,7 @@ import { ExperimentsPanel } from "@/components/experiments/experiments-panel";
 import { InboxPanel } from "@/components/inbox/inbox-panel";
 import { MoneyPanel } from "@/components/money/money-panel";
 import { getSectionMeta } from "@/components/nav/sections";
+import { PipelinePanel } from "@/components/pipeline/pipeline-panel";
 import { RadarPanel } from "@/components/radar/radar-panel";
 import { RepurposePanel } from "@/components/repurpose/repurpose-panel";
 import { SettingsPanel } from "@/components/settings/settings-panel";
@@ -65,6 +66,10 @@ export function SectionPanel({ section }: SectionPanelProps) {
 
   if (section === "money") {
     return <MoneyPanel />;
+  }
+
+  if (section === "pipeline") {
+    return <PipelinePanel />;
   }
 
   if (section === "templates") {

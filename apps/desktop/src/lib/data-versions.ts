@@ -8,7 +8,7 @@ export const DATA_SCHEMA_VERSIONS = {
   recovery: 1,
   revisions: 1,
   aiProjects: 1,
-  sqlite: 19,
+  sqlite: 20,
 } as const;
 
 export type DataSchemaKey = keyof typeof DATA_SCHEMA_VERSIONS;

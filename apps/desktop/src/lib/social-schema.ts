@@ -650,3 +650,40 @@ export interface TrackedLink {
   clicks: number;
   createdAt: number;
 }
+
+/**
+ * The production lifecycle a content item moves through (U33), which the
+ * pipeline kanban groups its columns by:
+ * - `idea`: a raw concept, not yet written.
+ * - `script`: being written / scripted.
+ * - `record`: scripted; recording the asset (video/audio).
+ * - `edit`: recorded; editing into its final form.
+ * - `publish`: edited and ready to publish (promote into a draft/scheduled post).
+ */
+export type ContentStage = "idea" | "script" | "record" | "edit" | "publish";
+
+/**
+ * A content item on the production pipeline kanban (U33).
+ *
+ * One row per idea, moved through {@link ContentStage} as it is produced. `body`
+ * is a JSON draft-body blob (the `drafts.body` / `autopilot_actions.body`
+ * precedent: a TEXT column the repo stores raw and the composer decodes) so a
+ * card can carry the post text + media it will be promoted into without a schema
+ * migration. `sortOrder` orders cards within a stage column. Workspace-scoped;
+ * DDL lives in the v19 -> v20 migration in `lib/db.ts`.
+ */
+export interface ContentItem {
+  id: string;
+  workspaceId: string;
+  /** Short, human-friendly title for the idea/card. */
+  title: string;
+  stage: ContentStage;
+  /** Free-form production notes, when set. */
+  notes: string | null;
+  /** JSON draft-body blob the card promotes into; defaults to "{}". */
+  body: string;
+  /** Orders cards within a stage column (lower first). */
+  sortOrder: number;
+  createdAt: number;
+  updatedAt: number;
+}

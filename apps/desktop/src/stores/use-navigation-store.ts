@@ -17,6 +17,7 @@ export type NavSection =
   | "autopilot"
   | "radar"
   | "money"
+  | "pipeline"
   | "templates"
   | "settings";
 
@@ -32,6 +33,7 @@ export const NAV_SECTIONS: NavSection[] = [
   "autopilot",
   "radar",
   "money",
+  "pipeline",
   "templates",
   "settings",
 ];

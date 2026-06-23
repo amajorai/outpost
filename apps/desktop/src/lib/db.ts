@@ -6,7 +6,7 @@ let db: Database | null = null;
 let dbInitPromise: Promise<Database> | null = null;
 
 // Bump this whenever you add a new migration below.
-const TARGET_SCHEMA_VERSION = 19;
+const TARGET_SCHEMA_VERSION = 20;
 
 /**
  * Pre-v10 domain tables that gain a `workspace_id` in the v10 migration.
@@ -698,6 +698,34 @@ const migrations: Record<number, MigrationFn> = {
     );
     await database.execute(
       "CREATE UNIQUE INDEX IF NOT EXISTS idx_tracked_links_short_code ON tracked_links(workspace_id, short_code)"
+    );
+  },
+  20: async (database) => {
+    // Production pipeline / kanban (U33). One workspace-scoped table whose rows
+    // are content ideas moved through a fixed production lifecycle the kanban
+    // groups by: idea -> script -> record -> edit -> publish.
+    //
+    // `stage` is plain TEXT (the deals.status precedent — no CHECK constraint, the
+    // TS `ContentStage` union is the source of truth). `body` is a JSON draft-body
+    // blob (the same shape `drafts.body` / `autopilot_actions.body` use) so a card
+    // can carry the post text + media it will be promoted into without another
+    // schema migration. `sort_order` orders cards within a stage column; new cards
+    // append. Indexed by (workspace_id, stage, sort_order) for the grouped board.
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS content_items (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        stage TEXT NOT NULL,
+        notes TEXT,
+        body TEXT NOT NULL DEFAULT '{}',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_content_items_workspace ON content_items(workspace_id, stage, sort_order)"
     );
   },
 };

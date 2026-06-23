@@ -5,6 +5,7 @@ import {
   DollarSign,
   FlaskConical,
   Inbox,
+  KanbanSquare,
   type LucideIcon,
   PenLine,
   Radar,
@@ -93,6 +94,13 @@ export const NAV_SECTION_META: NavSectionMeta[] = [
     description:
       "Track sponsorship deals, generate a media kit, and tag affiliate links.",
     icon: DollarSign,
+  },
+  {
+    id: "pipeline",
+    label: "Pipeline",
+    description:
+      "A production board: move ideas from script to record to edit to publish.",
+    icon: KanbanSquare,
   },
   {
     id: "templates",
