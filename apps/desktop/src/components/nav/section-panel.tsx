@@ -5,6 +5,7 @@ import { CalendarPanel } from "@/components/calendar/calendar-panel";
 import { ComposerPanel } from "@/components/compose/composer-panel";
 import { ExperimentsPanel } from "@/components/experiments/experiments-panel";
 import { InboxPanel } from "@/components/inbox/inbox-panel";
+import { MoneyPanel } from "@/components/money/money-panel";
 import { getSectionMeta } from "@/components/nav/sections";
 import { RadarPanel } from "@/components/radar/radar-panel";
 import { RepurposePanel } from "@/components/repurpose/repurpose-panel";
@@ -60,6 +61,10 @@ export function SectionPanel({ section }: SectionPanelProps) {
 
   if (section === "radar") {
     return <RadarPanel />;
+  }
+
+  if (section === "money") {
+    return <MoneyPanel />;
   }
 
   if (section === "templates") {

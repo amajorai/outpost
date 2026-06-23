@@ -2,6 +2,7 @@ import {
   Activity,
   Bot,
   CalendarDays,
+  DollarSign,
   FlaskConical,
   Inbox,
   type LucideIcon,
@@ -85,6 +86,13 @@ export const NAV_SECTION_META: NavSectionMeta[] = [
     description:
       "Track competitors and topics, and surface their winners and rising formats.",
     icon: Radar,
+  },
+  {
+    id: "money",
+    label: "Money",
+    description:
+      "Track sponsorship deals, generate a media kit, and tag affiliate links.",
+    icon: DollarSign,
   },
   {
     id: "templates",

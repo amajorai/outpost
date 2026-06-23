@@ -564,3 +564,89 @@ export interface AutopilotAction {
   scheduledPostId: string | null;
   createdAt: number;
 }
+
+/**
+ * A sponsorship deal's lifecycle (U31), the columns the money-hub kanban/table
+ * groups by:
+ * - `lead`: an inbound/identified opportunity, not yet in conversation.
+ * - `negotiating`: terms (scope, rate, timeline) are being agreed.
+ * - `active`: agreed and in progress — deliverables are being produced.
+ * - `delivered`: the deliverables have shipped; awaiting payment.
+ * - `paid`: closed out, money received.
+ */
+export type DealStatus =
+  | "lead"
+  | "negotiating"
+  | "active"
+  | "delivered"
+  | "paid";
+
+/** One agreed line item of work in a sponsorship deal (U31). */
+export interface DealDeliverable {
+  /** What is owed, e.g. "1 dedicated post" or "3-tweet thread". */
+  description: string;
+  /** 1 once this line item has been delivered, else 0. */
+  done: boolean;
+}
+
+/**
+ * A brand sponsorship deal in the creator's money hub (U31).
+ *
+ * One row per deal, moved through {@link DealStatus} as it progresses. The
+ * `deliverables` list is stored as a JSON blob (the brand_kit precedent: a TEXT
+ * column the repo parses to this typed shape, never exposed raw) so a deal can
+ * carry its line items without a schema migration. `rate` + `currency` capture
+ * the money; `dueDate` and `notes` are optional. Workspace-scoped. DDL lives in
+ * the v18 -> v19 migration in `lib/db.ts`.
+ */
+export interface Deal {
+  id: string;
+  workspaceId: string;
+  /** The sponsoring brand / company name. */
+  brand: string;
+  status: DealStatus;
+  /** The agreed rate for the deal, in `currency`. */
+  rate: number;
+  /** ISO 4217 currency code, e.g. "USD". */
+  currency: string;
+  /** The agreed line items of work. */
+  deliverables: DealDeliverable[];
+  /** Unix epoch millis the deliverables are due, when set. */
+  dueDate: number | null;
+  notes: string | null;
+  createdAt: number;
+}
+
+/** The UTM parameters of a tracked link (U31), stored as a JSON blob. */
+export interface UtmParams {
+  source: string | null;
+  medium: string | null;
+  campaign: string | null;
+  term: string | null;
+  content: string | null;
+}
+
+/**
+ * A UTM / affiliate link in the money hub (U31).
+ *
+ * One row per shareable link: a `destinationUrl`, a typed `utm` blob (the
+ * brand_kit JSON precedent), a generated `shortCode`, and a best-effort `clicks`
+ * counter. There is no redirect server, so `clicks` is a manual/best-effort
+ * counter incremented from the UI rather than true attribution. Workspace-scoped;
+ * a UNIQUE index on (workspace_id, short_code) keeps generated codes unique. DDL
+ * lives in the v18 -> v19 migration in `lib/db.ts`.
+ */
+export interface TrackedLink {
+  id: string;
+  workspaceId: string;
+  /** Human-friendly label for the link, e.g. "Spring sale - X bio". */
+  label: string;
+  /** The URL the link points at, before UTM params are appended. */
+  destinationUrl: string;
+  utm: UtmParams;
+  /** Short, workspace-unique code identifying the link. */
+  shortCode: string;
+  /** Best-effort click count (manually incremented; no redirect server). */
+  clicks: number;
+  createdAt: number;
+}

@@ -6,7 +6,7 @@ let db: Database | null = null;
 let dbInitPromise: Promise<Database> | null = null;
 
 // Bump this whenever you add a new migration below.
-const TARGET_SCHEMA_VERSION = 18;
+const TARGET_SCHEMA_VERSION = 19;
 
 /**
  * Pre-v10 domain tables that gain a `workspace_id` in the v10 migration.
@@ -645,6 +645,59 @@ const migrations: Record<number, MigrationFn> = {
     );
     await database.execute(
       "CREATE INDEX IF NOT EXISTS idx_autopilot_actions_plan ON autopilot_actions(plan_id)"
+    );
+  },
+  19: async (database) => {
+    // Sponsorship & money hub (U31). Two workspace-scoped tables.
+    //
+    // `deals` is the creator's sponsorship pipeline — one row per brand deal,
+    // moved through a fixed status lifecycle (lead -> negotiating -> active ->
+    // delivered -> paid) that the kanban/table UI groups by. `deliverables` is a
+    // JSON blob (the brand_kit precedent: a TEXT column the repo parses to a typed
+    // shape, not exposed raw) so a deal can list its line items without another
+    // schema migration. `rate` + `currency` capture the money; `due_date` and
+    // `notes` are optional. Indexed by (workspace_id, status) for the grouped view.
+    //
+    // `tracked_links` is UTM/affiliate link tracking — one row per shareable link
+    // with its destination, a JSON `utm` blob (same precedent as deliverables), a
+    // generated `short_code`, and a best-effort `clicks` counter. There is no
+    // redirect server, so clicks is a manual/best-effort counter (incremented from
+    // the UI), per the unit. The UNIQUE index on (workspace_id, short_code) keeps
+    // generated codes collision-free within a workspace.
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS deals (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        brand TEXT NOT NULL,
+        status TEXT NOT NULL,
+        rate REAL NOT NULL DEFAULT 0,
+        currency TEXT NOT NULL DEFAULT 'USD',
+        deliverables TEXT NOT NULL DEFAULT '[]',
+        due_date INTEGER,
+        notes TEXT,
+        created_at INTEGER NOT NULL
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_deals_workspace ON deals(workspace_id, status)"
+    );
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS tracked_links (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        label TEXT NOT NULL,
+        destination_url TEXT NOT NULL,
+        utm TEXT NOT NULL DEFAULT '{}',
+        short_code TEXT NOT NULL,
+        clicks INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_tracked_links_workspace ON tracked_links(workspace_id, created_at)"
+    );
+    await database.execute(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_tracked_links_short_code ON tracked_links(workspace_id, short_code)"
     );
   },
 };
