@@ -15,11 +15,15 @@ import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { Textarea } from "@repo/ui/textarea";
 import { formatDistanceToNow } from "date-fns";
-import { Inbox, Loader2, RefreshCw, Send } from "lucide-react";
+import { Inbox, Loader2, RefreshCw, Send, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { platformLabel } from "@/components/compose/platform-meta";
 import { getSectionMeta } from "@/components/nav/sections";
+import {
+  replySuggestFailureMessage,
+  suggestReply,
+} from "@/lib/inbox/reply-suggester";
 import type { InboxItem, InboxItemKind } from "@/lib/social-schema";
 import { useInboxStore } from "@/stores/use-inbox-store";
 
@@ -39,6 +43,7 @@ interface InboxRowProps {
 function InboxRow({ item, isReplying, onReply }: InboxRowProps) {
   const [draft, setDraft] = useState("");
   const [open, setOpen] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
 
   const handleSend = useCallback(async () => {
     const sent = await onReply(item, draft);
@@ -50,6 +55,21 @@ function InboxRow({ item, isReplying, onReply }: InboxRowProps) {
       toast("Could not send the reply");
     }
   }, [draft, item, onReply]);
+
+  const handleSuggest = useCallback(async () => {
+    setOpen(true);
+    setIsSuggesting(true);
+    try {
+      const result = await suggestReply(item);
+      if (result.failure) {
+        toast(replySuggestFailureMessage(result.failure));
+        return;
+      }
+      setDraft(result.reply);
+    } finally {
+      setIsSuggesting(false);
+    }
+  }, [item]);
 
   const received = useMemo(
     () => formatDistanceToNow(new Date(item.receivedAt), { addSuffix: true }),
@@ -81,6 +101,19 @@ function InboxRow({ item, isReplying, onReply }: InboxRowProps) {
         ) : null}
         <Button
           className="ml-auto"
+          disabled={isSuggesting}
+          onClick={handleSuggest}
+          size="sm"
+          variant="ghost"
+        >
+          {isSuggesting ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Sparkles className="size-4" />
+          )}
+          Suggest reply
+        </Button>
+        <Button
           onClick={() => setOpen((value) => !value)}
           size="sm"
           variant="ghost"
@@ -92,14 +125,17 @@ function InboxRow({ item, isReplying, onReply }: InboxRowProps) {
         <div className="mt-3 flex flex-col gap-2">
           <Textarea
             aria-label={`Reply to ${item.author}`}
+            disabled={isSuggesting}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder="Write a reply…"
+            placeholder={
+              isSuggesting ? "Drafting a suggested reply…" : "Write a reply…"
+            }
             rows={3}
             value={draft}
           />
           <Button
             className="self-end"
-            disabled={isReplying || draft.trim().length === 0}
+            disabled={isReplying || isSuggesting || draft.trim().length === 0}
             onClick={handleSend}
             size="sm"
           >
