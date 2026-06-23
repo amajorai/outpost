@@ -22,15 +22,19 @@ import { MediaAttachments } from "./media-attachments";
 import { platformLabel } from "./platform-meta";
 import { TargetPicker } from "./target-picker";
 
+/** Format a date as a `datetime-local` value (YYYY-MM-DDTHH:mm) in local time. */
+function toScheduleValue(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 /** A default schedule time: rounded to the next quarter hour, local time. */
 function defaultScheduleValue(): string {
   const now = new Date(Date.now() + 15 * 60 * 1000);
   now.setSeconds(0, 0);
-  // Format as the `datetime-local` value (YYYY-MM-DDTHH:mm) in local time.
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
-    now.getDate()
-  )}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  return toScheduleValue(now);
 }
 
 export function ComposerPanel() {
@@ -51,6 +55,7 @@ export function ComposerPanel() {
   const schedule = useComposerStore((s) => s.schedule);
   const postNow = useComposerStore((s) => s.postNow);
   const reset = useComposerStore((s) => s.reset);
+  const consumeScheduledAt = useComposerStore((s) => s.consumeScheduledAt);
 
   const capabilityMatrix = useIntegrationStore((s) => s.capabilityMatrix);
   const refreshIntegration = useIntegrationStore((s) => s.refresh);
@@ -61,7 +66,12 @@ export function ComposerPanel() {
   useEffect(() => {
     loadAccounts();
     refreshIntegration();
-  }, [loadAccounts, refreshIntegration]);
+    // If the calendar handed us a slot time (U11), seed the schedule field.
+    const pending = consumeScheduledAt();
+    if (pending !== null) {
+      setScheduleValue(toScheduleValue(new Date(pending)));
+    }
+  }, [loadAccounts, refreshIntegration, consumeScheduledAt]);
 
   const selectedAccounts = useMemo(
     () => accounts.filter((a) => selectedAccountIds.includes(a.id)),

@@ -38,6 +38,12 @@ interface ComposerState {
   accounts: SocialAccount[];
   /** The draft currently being edited, or null for an unsaved post. */
   draftId: string | null;
+  /**
+   * A prefilled schedule time (epoch millis) handed off from another surface,
+   * e.g. clicking an empty calendar slot (U11). The composer panel reads and
+   * clears this on mount via `consumeScheduledAt`; null when nothing is pending.
+   */
+  pendingScheduledAt: number | null;
   /** True while a save/schedule action is in flight. */
   isSubmitting: boolean;
   /** Last action error, surfaced to the user. */
@@ -58,6 +64,10 @@ interface ComposerState {
   schedule: (scheduledFor: number) => Promise<void>;
   /** Schedule the post for immediate publishing. */
   postNow: () => Promise<void>;
+  /** Stash a schedule time for the composer panel to pick up on mount (U11). */
+  prefillSchedule: (scheduledFor: number) => void;
+  /** Read and clear the pending schedule time, if any. */
+  consumeScheduledAt: () => number | null;
 }
 
 function currentBody(state: ComposerState): DraftBody {
@@ -75,6 +85,7 @@ export const useComposerStore = create<ComposerState>()((set, get) => ({
   selectedAccountIds: [],
   accounts: [],
   draftId: null,
+  pendingScheduledAt: null,
   isSubmitting: false,
   error: null,
 
@@ -212,5 +223,15 @@ export const useComposerStore = create<ComposerState>()((set, get) => ({
     runSweep().catch(() => {
       // runSweep swallows its own errors; the catch keeps the promise unfloated.
     });
+  },
+
+  prefillSchedule: (scheduledFor) => set({ pendingScheduledAt: scheduledFor }),
+
+  consumeScheduledAt: () => {
+    const pending = get().pendingScheduledAt;
+    if (pending !== null) {
+      set({ pendingScheduledAt: null });
+    }
+    return pending;
   },
 }));

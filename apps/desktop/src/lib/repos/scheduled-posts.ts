@@ -222,3 +222,51 @@ export async function updatePostTargetStatus(
     postTargetId,
   ]);
 }
+
+/**
+ * Reschedule a post to a new time (drag-to-reschedule on the calendar, U11).
+ *
+ * Only moves a post that is still `scheduled` — a post that has gone `due` or
+ * beyond is already in the publish pipeline's hands, so moving it would race the
+ * sweep. The guard is in the WHERE clause so the update is a no-op (rather than a
+ * silent overwrite) for ineligible rows.
+ */
+export async function rescheduleScheduledPost(
+  scheduledPostId: string,
+  scheduledFor: number
+): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    "UPDATE scheduled_posts SET scheduled_for = $1 WHERE id = $2 AND status = 'scheduled'",
+    [scheduledFor, scheduledPostId]
+  );
+}
+
+/**
+ * Cancel a scheduled post (calendar delete, U11). Sets the parent to
+ * `cancelled` and any still-`pending` targets to `cancelled`, atomically. Only
+ * affects posts that have not yet started publishing.
+ */
+export async function cancelScheduledPost(
+  scheduledPostId: string
+): Promise<void> {
+  const db = await getDb();
+  const cancelledParent: ScheduledPostStatus = "cancelled";
+  const cancelledTarget: PostTarget["status"] = "cancelled";
+
+  await db.execute("BEGIN TRANSACTION");
+  try {
+    await db.execute(
+      "UPDATE scheduled_posts SET status = $1 WHERE id = $2 AND status IN ('scheduled', 'due')",
+      [cancelledParent, scheduledPostId]
+    );
+    await db.execute(
+      "UPDATE post_targets SET status = $1 WHERE scheduled_post_id = $2 AND status = 'pending'",
+      [cancelledTarget, scheduledPostId]
+    );
+    await db.execute("COMMIT");
+  } catch (err) {
+    await db.execute("ROLLBACK");
+    throw err;
+  }
+}

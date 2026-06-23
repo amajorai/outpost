@@ -1,3 +1,4 @@
+import { CalendarPanel } from "@/components/calendar/calendar-panel";
 import { ComposerPanel } from "@/components/compose/composer-panel";
 import { getSectionMeta } from "@/components/nav/sections";
 import { SettingsPanel } from "@/components/settings/settings-panel";
@@ -14,6 +15,10 @@ export function SectionPanel({ section }: SectionPanelProps) {
 
   if (section === "compose") {
     return <ComposerPanel />;
+  }
+
+  if (section === "calendar") {
+    return <CalendarPanel />;
   }
 
   const { label, description, icon: Icon } = getSectionMeta(section);
