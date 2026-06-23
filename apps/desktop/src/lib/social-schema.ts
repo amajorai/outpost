@@ -291,3 +291,82 @@ export interface ActivityItem {
   engagementFetchedAt: number | null;
   publishedAt: number | null;
 }
+
+/**
+ * The metric an experiment optimizes for (U25). `likes`/`comments`/`views` map
+ * directly to the same-named `activity_items` columns; `engagement_rate` is a
+ * derived ratio computed from those columns (see `lib/experiments/engine.ts`),
+ * not a stored column.
+ */
+export type ExperimentGoalMetric =
+  | "likes"
+  | "comments"
+  | "views"
+  | "engagement_rate";
+
+/**
+ * An experiment's lifecycle: `draft` (created, not yet published),
+ * `running` (variants published, observation window open), `complete`
+ * (window elapsed, winner computed + stored).
+ */
+export type ExperimentStatus = "draft" | "running" | "complete";
+
+/**
+ * An A/B/n experiment over content/timing variants for one goal metric (U25).
+ *
+ * Workspace-scoped. Its variants ({@link ExperimentVariant}) each publish via
+ * the existing scheduled_posts/post_targets pipeline; after
+ * `observationWindowHours` the engine collects each variant's engagement and
+ * persists a winning {@link ExperimentResult}. The matching DDL lives in the
+ * v14 -> v15 migration in `lib/db.ts`.
+ */
+export interface Experiment {
+  id: string;
+  workspaceId: string;
+  name: string;
+  goalMetric: ExperimentGoalMetric;
+  status: ExperimentStatus;
+  /** Hours after publish to wait before measuring and choosing a winner. */
+  observationWindowHours: number;
+  createdAt: number;
+}
+
+/**
+ * One variant of an experiment: a candidate post body published to one platform
+ * (U25). Scopes to its experiment through `experimentId` only — like
+ * `post_targets`, child rows reach the workspace through their parent.
+ *
+ * `draftBody` is a JSON blob (the same shape `drafts.body` uses) so a variant
+ * can carry text + media without a schema migration. `scheduledPostId` is set
+ * once the engine has published the variant via the pipeline.
+ */
+export interface ExperimentVariant {
+  id: string;
+  experimentId: string;
+  /** Human-friendly label, e.g. "Variant A" or "Morning post". */
+  label: string;
+  /** JSON-encoded post body for this variant. */
+  draftBody: string;
+  /** The `scheduled_posts.id` created for this variant, once published. */
+  scheduledPostId: string | null;
+  /** Platform key this variant publishes to, e.g. "x", "bluesky". */
+  targetPlatform: string;
+  /** Unix epoch millis this variant is scheduled to publish, when known. */
+  scheduledFor: number | null;
+}
+
+/**
+ * The measured outcome for one variant of an experiment (U25): its goal-metric
+ * value at measurement time and whether it won. One row per variant (a UNIQUE
+ * index on `experiment_id, variant_id` keeps re-measurement an upsert).
+ */
+export interface ExperimentResult {
+  id: string;
+  experimentId: string;
+  variantId: string;
+  /** The variant's goal-metric value at `measuredAt`. */
+  metricValue: number;
+  measuredAt: number;
+  /** 1 when this variant won the experiment, else 0. */
+  isWinner: number;
+}

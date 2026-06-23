@@ -1,6 +1,7 @@
 import { ActivityPanel } from "@/components/activity/activity-panel";
 import { CalendarPanel } from "@/components/calendar/calendar-panel";
 import { ComposerPanel } from "@/components/compose/composer-panel";
+import { ExperimentsPanel } from "@/components/experiments/experiments-panel";
 import { InboxPanel } from "@/components/inbox/inbox-panel";
 import { getSectionMeta } from "@/components/nav/sections";
 import { RepurposePanel } from "@/components/repurpose/repurpose-panel";
@@ -35,6 +36,10 @@ export function SectionPanel({ section }: SectionPanelProps) {
 
   if (section === "activity") {
     return <ActivityPanel />;
+  }
+
+  if (section === "experiments") {
+    return <ExperimentsPanel />;
   }
 
   if (section === "templates") {

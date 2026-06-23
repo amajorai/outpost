@@ -1,6 +1,7 @@
 import {
   Activity,
   CalendarDays,
+  FlaskConical,
   Inbox,
   type LucideIcon,
   PenLine,
@@ -54,6 +55,12 @@ export const NAV_SECTION_META: NavSectionMeta[] = [
     label: "Activity",
     description: "A clean timeline of what has happened.",
     icon: Activity,
+  },
+  {
+    id: "experiments",
+    label: "Experiments",
+    description: "A/B your content and timing, then keep what wins.",
+    icon: FlaskConical,
   },
   {
     id: "templates",

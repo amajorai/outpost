@@ -6,7 +6,7 @@ let db: Database | null = null;
 let dbInitPromise: Promise<Database> | null = null;
 
 // Bump this whenever you add a new migration below.
-const TARGET_SCHEMA_VERSION = 14;
+const TARGET_SCHEMA_VERSION = 15;
 
 /**
  * Pre-v10 domain tables that gain a `workspace_id` in the v10 migration.
@@ -443,6 +443,66 @@ const migrations: Record<number, MigrationFn> = {
     );
     await database.execute(
       "CREATE UNIQUE INDEX IF NOT EXISTS idx_activity_items_dedupe ON activity_items(workspace_id, social_account_id, post_remote_id)"
+    );
+  },
+  15: async (database) => {
+    // Experiments engine (U25). The attention layer's core: an experiment runs
+    // N content/timing variants for a single goal metric, publishes each via the
+    // existing scheduled_posts/post_targets pipeline, and after an observation
+    // window collects each variant's engagement and computes a winner.
+    //
+    // `experiments` is workspace-scoped. `experiment_variants` and
+    // `experiment_results` scope through `experiment_id` only (no own
+    // workspace_id), mirroring the post_targets/post_history precedent where the
+    // child rows reach the workspace through their parent. is_winner is an INTEGER
+    // flag (SQLite has no bool), following the `connected`/`replied` precedent.
+    //
+    // draft_body is a JSON blob (the same shape `drafts.body` uses) so a variant
+    // can carry text + media without a schema migration. scheduled_post_id links
+    // a variant to the scheduled post the engine created for it once published.
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS experiments (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        goal_metric TEXT NOT NULL,
+        status TEXT NOT NULL,
+        observation_window_hours INTEGER NOT NULL,
+        created_at INTEGER NOT NULL
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_experiments_workspace ON experiments(workspace_id, created_at)"
+    );
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS experiment_variants (
+        id TEXT PRIMARY KEY,
+        experiment_id TEXT NOT NULL,
+        label TEXT NOT NULL,
+        draft_body TEXT NOT NULL,
+        scheduled_post_id TEXT,
+        target_platform TEXT NOT NULL,
+        scheduled_for INTEGER
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_experiment_variants_experiment ON experiment_variants(experiment_id)"
+    );
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS experiment_results (
+        id TEXT PRIMARY KEY,
+        experiment_id TEXT NOT NULL,
+        variant_id TEXT NOT NULL,
+        metric_value REAL NOT NULL,
+        measured_at INTEGER NOT NULL,
+        is_winner INTEGER NOT NULL DEFAULT 0
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_experiment_results_experiment ON experiment_results(experiment_id)"
+    );
+    await database.execute(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_experiment_results_variant ON experiment_results(experiment_id, variant_id)"
     );
   },
 };
