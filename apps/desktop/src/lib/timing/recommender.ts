@@ -252,7 +252,11 @@ function hourSlots(dated: ActivityItem[], baseline: number): RecommendedSlot[] {
       hour,
       avgEngagement: avg,
       sampleSize: acc.count,
-      liftPct: liftPercent(avg, baseline),
+      // A single post's lift is noise; rank it as a useful hour but withhold the
+      // lift number until the bucket is dense enough to quote it honestly. The
+      // surfaces guard the badge on a non-null lift, so it simply won't render.
+      liftPct:
+        acc.count >= MIN_FINE_BUCKET_SAMPLE ? liftPercent(avg, baseline) : null,
     });
   }
   slots.sort((a, b) => b.avgEngagement - a.avgEngagement);
