@@ -9,6 +9,7 @@ import { RadarPanel } from "@/components/radar/radar-panel";
 import { RepurposePanel } from "@/components/repurpose/repurpose-panel";
 import { SettingsPanel } from "@/components/settings/settings-panel";
 import { TemplatesPanel } from "@/components/templates/templates-panel";
+import { WarRoomPanel } from "@/components/war-room/war-room-panel";
 import type { NavSection } from "@/stores/use-navigation-store";
 
 interface SectionPanelProps {
@@ -16,6 +17,10 @@ interface SectionPanelProps {
 }
 
 export function SectionPanel({ section }: SectionPanelProps) {
+  if (section === "war-room") {
+    return <WarRoomPanel />;
+  }
+
   if (section === "settings") {
     return <SettingsPanel />;
   }
