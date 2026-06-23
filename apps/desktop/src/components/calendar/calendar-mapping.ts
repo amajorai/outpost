@@ -37,12 +37,25 @@ const STATUS_COLOR: Record<ScheduledPostStatus, EventColor> = {
   cancelled: "muted",
 };
 
-/** Posts in these states have already run and must not be rescheduled/cancelled. */
-const TERMINAL_STATUSES: ReadonlySet<ScheduledPostStatus> =
-  new Set<ScheduledPostStatus>(["published", "partial", "failed", "cancelled"]);
+/**
+ * Posts in these states must not be rescheduled or cancelled from the calendar.
+ * This includes truly terminal posts (published/partial/failed/cancelled) AND
+ * `publishing`, which is mid-flight in the publish pipeline — cancelling it would
+ * race the runner and `cancelScheduledPost` only touches scheduled/due rows, so
+ * the action would be a confusing no-op. `due` stays editable: it is still
+ * cancellable (the cancel query accepts `due`).
+ */
+const READ_ONLY_STATUSES: ReadonlySet<ScheduledPostStatus> =
+  new Set<ScheduledPostStatus>([
+    "publishing",
+    "published",
+    "partial",
+    "failed",
+    "cancelled",
+  ]);
 
 export function isTerminalStatus(status: ScheduledPostStatus): boolean {
-  return TERMINAL_STATUSES.has(status);
+  return READ_ONLY_STATUSES.has(status);
 }
 
 /** Map a single scheduled post to a calendar event (title filled in later). */
