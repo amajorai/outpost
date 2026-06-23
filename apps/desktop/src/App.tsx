@@ -1,9 +1,11 @@
 import { useEffect, useRef } from "react";
+import { CrossPostReviewModal } from "@/components/cross-post/cross-post-review-modal";
 import { LicenseActivation } from "@/components/LicenseActivation";
 import { AppShell } from "@/components/nav/app-shell";
 import { Toaster } from "@/components/ui/sonner";
 import { VersionGateModal } from "@/components/VersionGateModal";
 import { useAppUpdater } from "@/hooks/use-app-updater";
+import { useCrossPost } from "@/hooks/use-cross-post";
 import { usePublishRunner } from "@/hooks/use-publish-runner";
 import { useScheduler } from "@/hooks/use-scheduler";
 import { useWindowBounds } from "@/hooks/use-window-bounds";
@@ -30,6 +32,11 @@ function PublishRunnerManager() {
 
 function SchedulerManager() {
   useScheduler();
+  return null;
+}
+
+function CrossPostManager() {
+  useCrossPost();
   return null;
 }
 
@@ -97,6 +104,8 @@ export default function App() {
       <WindowBoundsManager />
       <PublishRunnerManager />
       <SchedulerManager />
+      <CrossPostManager />
+      <CrossPostReviewModal />
     </>
   );
 }
