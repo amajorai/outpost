@@ -2,6 +2,7 @@ import { CalendarPanel } from "@/components/calendar/calendar-panel";
 import { ComposerPanel } from "@/components/compose/composer-panel";
 import { InboxPanel } from "@/components/inbox/inbox-panel";
 import { getSectionMeta } from "@/components/nav/sections";
+import { RepurposePanel } from "@/components/repurpose/repurpose-panel";
 import { SettingsPanel } from "@/components/settings/settings-panel";
 import { TemplatesPanel } from "@/components/templates/templates-panel";
 import type { NavSection } from "@/stores/use-navigation-store";
@@ -17,6 +18,10 @@ export function SectionPanel({ section }: SectionPanelProps) {
 
   if (section === "compose") {
     return <ComposerPanel />;
+  }
+
+  if (section === "repurpose") {
+    return <RepurposePanel />;
   }
 
   if (section === "calendar") {

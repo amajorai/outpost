@@ -116,6 +116,24 @@ interface ComposerState {
    * beyond the primary text.
    */
   applyTemplate: (templateId: string) => Promise<void>;
+  /**
+   * Load an atomized post (U17) into the composer for review. Replaces the
+   * current post wholesale: sets the segments to the atomized post's text and
+   * selects every connected account on its platform (or none when that platform
+   * isn't connected, leaving the user to pick targets). Ensures accounts are
+   * loaded first so the selection isn't pruned by `loadAccounts`.
+   */
+  loadAtomizedPost: (
+    post: import("@/lib/repurpose/atomize").AtomizedPost
+  ) => Promise<void>;
+  /**
+   * Batch-add atomized posts (U17) straight to the drafts queue without opening
+   * each in the composer. Persists one draft per post via `saveDraft`. Returns
+   * the count saved so the caller can surface a toast. Never throws.
+   */
+  batchAddAtomizedToDrafts: (
+    posts: import("@/lib/repurpose/atomize").AtomizedPost[]
+  ) => Promise<number>;
   /** Save (insert or update) the current draft. */
   save: () => Promise<void>;
   /** Load a draft by id into the composer. */
@@ -328,6 +346,53 @@ export const useComposerStore = create<ComposerState>()((set, get) => ({
     } catch (error) {
       logger.error({ err: error }, "[Composer] Failed to apply template");
     }
+  },
+
+  loadAtomizedPost: async (post) => {
+    // Ensure accounts are loaded before selecting, so the selection isn't pruned.
+    const state = get();
+    if (state.accounts.length === 0) {
+      await get().loadAccounts();
+    }
+    const accounts = get().accounts;
+    const accountIds = accounts
+      .filter((account) => account.platform === post.platform)
+      .map((account) => account.id);
+    const segments = post.segments.map((segment) => ({
+      text: segment.text,
+      media: [],
+    }));
+    set({
+      ...withSegments(segments),
+      selectedAccountIds: accountIds,
+      platformVariants: {},
+      watermarkPlatforms: [],
+      draftId: null,
+      error: null,
+    });
+  },
+
+  batchAddAtomizedToDrafts: async (posts) => {
+    let saved = 0;
+    for (const post of posts) {
+      const segments = post.segments.map((segment) => ({
+        text: segment.text,
+        media: [],
+      }));
+      const body: DraftBody = {
+        ...emptyDraftBody(),
+        text: segments[0]?.text ?? "",
+        accountIds: [],
+        segments: segments.length > 0 ? segments : [{ text: "", media: [] }],
+      };
+      try {
+        await saveDraft({ body });
+        saved += 1;
+      } catch (error) {
+        logger.error({ err: error }, "[Composer] Failed to batch-add draft");
+      }
+    }
+    return saved;
   },
 
   save: async () => {

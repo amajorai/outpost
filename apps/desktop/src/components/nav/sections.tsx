@@ -4,6 +4,7 @@ import {
   Inbox,
   type LucideIcon,
   PenLine,
+  Scissors,
   Settings,
   Swords,
   Wand2,
@@ -29,6 +30,12 @@ export const NAV_SECTION_META: NavSectionMeta[] = [
     label: "Compose",
     description: "Draft and shape your next post.",
     icon: PenLine,
+  },
+  {
+    id: "repurpose",
+    label: "Repurpose",
+    description: "Atomize long-form content into platform-native posts.",
+    icon: Scissors,
   },
   {
     id: "calendar",

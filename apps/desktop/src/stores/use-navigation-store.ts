@@ -8,6 +8,7 @@ const ACTIVE_SECTION_FIELD = "active_section";
 export type NavSection =
   | "war-room"
   | "compose"
+  | "repurpose"
   | "calendar"
   | "inbox"
   | "activity"
@@ -17,6 +18,7 @@ export type NavSection =
 export const NAV_SECTIONS: NavSection[] = [
   "war-room",
   "compose",
+  "repurpose",
   "calendar",
   "inbox",
   "activity",
