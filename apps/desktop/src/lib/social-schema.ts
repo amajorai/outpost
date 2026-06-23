@@ -428,3 +428,71 @@ export interface AutoresearchIteration {
   decision: AutoresearchDecision;
   createdAt: number;
 }
+
+/**
+ * What a radar target tracks (U28): a specific creator (`competitor`, whose
+ * `value` is an @handle on `platform`) or a topic/keyword (`topic`, whose
+ * `value` is the search phrase). A single kind-discriminated table keeps the
+ * competitor + topic surfaces symmetric in the repo and UI.
+ */
+export type RadarTargetKind = "competitor" | "topic";
+
+/**
+ * A creator or topic the user is tracking on the competitor/trend radar (U28).
+ *
+ * The user *input* of the radar — what to watch. The radar fetch step reads
+ * these and produces {@link TrendSignal}s (the cached output). Workspace-scoped.
+ * The matching DDL lives in the v16 -> v17 migration in `lib/db.ts`; a UNIQUE
+ * index on (workspace_id, kind, platform, value) makes re-adding the same target
+ * idempotent.
+ */
+export interface RadarTarget {
+  id: string;
+  workspaceId: string;
+  kind: RadarTargetKind;
+  /** Platform key for a competitor (e.g. "x"); a hint/null for a topic. */
+  platform: string | null;
+  /** The @handle for a competitor, or the keyword/phrase for a topic. */
+  value: string;
+  /** Optional human-friendly label shown in the UI. */
+  label: string | null;
+  addedAt: number;
+}
+
+/**
+ * The kind of a cached radar finding (U28): a tracked creator's recent
+ * high-performing post (`creator-winner`) or a rising topic/format (`trend`).
+ */
+export type TrendSignalKind = "creator-winner" | "trend";
+
+/**
+ * A cached radar finding (U28): a competitor's winning post or a rising
+ * topic/format, surfaced in the radar view and consumable by the U27
+ * autoresearch loop as research input.
+ *
+ * The *output* of the radar fetch step. Workspace-scoped. `targetId` links the
+ * signal back to the {@link RadarTarget} it was fetched for (null for a general
+ * trend). The matching DDL lives in the v16 -> v17 migration in `lib/db.ts`; a
+ * UNIQUE dedupe index on (workspace_id, kind, platform, target_id, external_id)
+ * makes a refresh upsert in place rather than duplicate — the activity-feed
+ * pattern. `raw` is an optional JSON blob for provider-specific extras.
+ */
+export interface TrendSignal {
+  id: string;
+  workspaceId: string;
+  kind: TrendSignalKind;
+  /** The {@link RadarTarget} this signal came from, or null for a general trend. */
+  targetId: string | null;
+  platform: string | null;
+  /** Stable per-signal key (remote post id or a slug of the title) — dedupe key. */
+  externalId: string;
+  title: string;
+  summary: string | null;
+  url: string | null;
+  /** Relative strength of the signal (e.g. an engagement count or rank score). */
+  score: number;
+  /** Optional JSON blob of provider-specific extras. */
+  raw: string | null;
+  /** Unix epoch millis the signal was fetched/cached. */
+  fetchedAt: number;
+}

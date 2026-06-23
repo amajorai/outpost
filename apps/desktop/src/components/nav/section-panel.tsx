@@ -5,6 +5,7 @@ import { ComposerPanel } from "@/components/compose/composer-panel";
 import { ExperimentsPanel } from "@/components/experiments/experiments-panel";
 import { InboxPanel } from "@/components/inbox/inbox-panel";
 import { getSectionMeta } from "@/components/nav/sections";
+import { RadarPanel } from "@/components/radar/radar-panel";
 import { RepurposePanel } from "@/components/repurpose/repurpose-panel";
 import { SettingsPanel } from "@/components/settings/settings-panel";
 import { TemplatesPanel } from "@/components/templates/templates-panel";
@@ -45,6 +46,10 @@ export function SectionPanel({ section }: SectionPanelProps) {
 
   if (section === "autoresearch") {
     return <AutoresearchPanel />;
+  }
+
+  if (section === "radar") {
+    return <RadarPanel />;
   }
 
   if (section === "templates") {

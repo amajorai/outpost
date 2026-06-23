@@ -6,7 +6,7 @@ let db: Database | null = null;
 let dbInitPromise: Promise<Database> | null = null;
 
 // Bump this whenever you add a new migration below.
-const TARGET_SCHEMA_VERSION = 16;
+const TARGET_SCHEMA_VERSION = 17;
 
 /**
  * Pre-v10 domain tables that gain a `workspace_id` in the v10 migration.
@@ -545,6 +545,66 @@ const migrations: Record<number, MigrationFn> = {
     `);
     await database.execute(
       "CREATE INDEX IF NOT EXISTS idx_autoresearch_iterations_workspace ON autoresearch_iterations(workspace_id, iteration_number)"
+    );
+  },
+  17: async (database) => {
+    // Competitor / trend radar (U28). Two workspace-scoped surfaces:
+    //
+    // `radar_targets` is the user *input*: the creators and topics the user
+    // chooses to track. A single kind-discriminated table (kind = 'competitor'
+    // | 'topic') rather than two tables — both carry the same (platform?, value,
+    // label, added_at) shape, and one table keeps the repo and UI symmetric. For
+    // a competitor `value` is the @handle; for a topic it's the keyword/phrase.
+    // The UNIQUE index on (workspace_id, kind, platform, value) keeps re-adding
+    // the same target idempotent.
+    //
+    // `trend_signals` is the cached *output*: the radar's findings — a tracked
+    // creator's recent winner, or a rising topic/format. kind = 'creator-winner'
+    // | 'trend'. target_id links a signal back to the radar_target it came from
+    // (nullable: a general trend has no specific target). The UNIQUE dedupe index
+    // (workspace_id, kind, platform, target_id, external_id) is added HERE in the
+    // table's first migration — never bolted on later — so a refresh upserts in
+    // place rather than duplicating, mirroring activity_items. external_id is a
+    // stable key for the signal (a remote post id, or a slug of the title) so the
+    // same finding updates rather than accumulates.
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS radar_targets (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        platform TEXT,
+        value TEXT NOT NULL,
+        label TEXT,
+        added_at INTEGER NOT NULL
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_radar_targets_workspace ON radar_targets(workspace_id, kind)"
+    );
+    await database.execute(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_radar_targets_dedupe ON radar_targets(workspace_id, kind, platform, value)"
+    );
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS trend_signals (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        target_id TEXT,
+        platform TEXT,
+        external_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        summary TEXT,
+        url TEXT,
+        score REAL NOT NULL DEFAULT 0,
+        raw TEXT,
+        fetched_at INTEGER NOT NULL
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_trend_signals_workspace ON trend_signals(workspace_id, fetched_at)"
+    );
+    await database.execute(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_trend_signals_dedupe ON trend_signals(workspace_id, kind, platform, target_id, external_id)"
     );
   },
 };

@@ -19,6 +19,7 @@
 import { acpPrompt } from "@/lib/acp-client";
 import type { AutoresearchProposalData } from "@/lib/autoresearch/loop";
 import { logger } from "@/lib/logger";
+import { getRadarResearchInput } from "@/lib/radar/signal";
 import { listActivityItems } from "@/lib/repos/activity-items";
 import { decodeDraftBody } from "@/lib/repos/drafts";
 import {
@@ -143,11 +144,25 @@ function voiceGuidance(voice: VoiceProfileData | null): string {
   return lines.join("\n");
 }
 
+/**
+ * The radar-signal guidance block (U28): the competitor/trend radar's cached
+ * findings, surfaced verbatim. Already formatted (or "") by
+ * `getRadarResearchInput`, so it follows the same "absence contributes nothing"
+ * contract as the other blocks.
+ */
+function radarGuidance(radarInput: string): string {
+  if (radarInput.trim().length === 0) {
+    return "";
+  }
+  return `\n${radarInput}`;
+}
+
 function buildPrompt(
   strategy: AutoresearchStrategy,
   voice: VoiceProfileData | null,
   winners: ActivityItem[],
-  experimentWinners: ExperimentWinner[]
+  experimentWinners: ExperimentWinner[],
+  radarInput: string
 ): string {
   return [
     "You are a growth strategist running a closed experimentation loop. Propose",
@@ -161,6 +176,7 @@ function buildPrompt(
     voiceGuidance(voice),
     winnersGuidance(winners, strategy.goalMetric),
     experimentWinnersGuidance(experimentWinners),
+    radarGuidance(radarInput),
     "",
     "Respond with ONLY a JSON object, no prose and no code fences, of the form:",
     '{ "hook": "<the opening line/hook>", "body": "<the full candidate post',
@@ -250,11 +266,20 @@ export async function proposeChange(
     );
   }
 
+  // The competitor/trend radar (U28) feeds in what is working in the niche right
+  // now. Read defensively: a failure degrades to an unconditioned proposal.
+  let radarInput = "";
+  try {
+    radarInput = await getRadarResearchInput(workspaceId);
+  } catch (error) {
+    logger.error({ err: error }, "[Autoresearch] Failed to read radar signal");
+  }
+
   let raw: string;
   try {
     raw = await acpPrompt(
       agent,
-      buildPrompt(strategy, voice, winners, experimentWinners)
+      buildPrompt(strategy, voice, winners, experimentWinners, radarInput)
     );
   } catch (error) {
     logger.error({ err: error }, "[Autoresearch] Agent proposal failed");

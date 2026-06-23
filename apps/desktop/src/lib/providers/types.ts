@@ -150,6 +150,27 @@ export interface ProviderInboxItem {
   receivedAt: number;
 }
 
+/**
+ * One of a creator's recent high-performing posts as a provider surfaces it
+ * (U28). A thin DTO, like {@link ProviderInboxItem}: it carries only what the
+ * provider can read about a public post on the tracked creator's account. The
+ * radar layer maps it onto a `TrendSignal` and caches it, deduping on
+ * `externalId`.
+ */
+export interface ProviderCreatorPost {
+  /** The post's id as known to the remote platform — the dedupe key. */
+  externalId: string;
+  platform: Platform;
+  /** The post body / caption text. */
+  text: string;
+  /** Canonical URL of the post on the remote platform, when known. */
+  permalink?: string;
+  /** Engagement counts at read time, used to rank "high-performing". */
+  engagement: EngagementCounts;
+  /** Unix epoch millis the post was published, when known. */
+  publishedAt?: number;
+}
+
 /** Engagement counts for a single post. All fields optional/unknown-safe. */
 export interface EngagementCounts {
   likes?: number;
@@ -209,6 +230,18 @@ export interface PlatformProvider {
     item: ProviderInboxItem,
     text: string
   ): Promise<PublishResult>;
+
+  /**
+   * Read a tracked creator's recent high-performing posts by handle (U28).
+   * Optional, for the same reason as `readInbox`: providers that can't discover
+   * a public creator's posts omit it, and the radar layer treats a missing
+   * method as "returns nothing", degrading to ACP-generated signal. Returns the
+   * creator's recent posts; the radar layer ranks + caches the top ones.
+   */
+  readCreatorTopPosts?(
+    platform: Platform,
+    handle: string
+  ): Promise<ProviderCreatorPost[]>;
 }
 
 /** A capability matrix where every platform is unsupported. */

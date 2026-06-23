@@ -198,6 +198,7 @@ export type {
   PlatformCapabilities,
   PlatformProvider,
   ProviderAccount,
+  ProviderCreatorPost,
   ProviderInboxItem,
   ProviderInboxKind,
   PublishMedia,

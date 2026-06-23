@@ -19,6 +19,7 @@ import {
   type PlatformCapabilities,
   type PlatformProvider,
   type ProviderAccount,
+  type ProviderCreatorPost,
   type ProviderInboxItem,
   type PublishResult,
   type PublishTarget,
@@ -65,6 +66,9 @@ function hashString(input: string): number {
 
 /** Platforms the fake models as having a DM surface (mirrors X / Instagram). */
 const FAKE_DM_PLATFORMS: ReadonlySet<Platform> = new Set(["x", "instagram"]);
+
+/** Strips a leading "@" from a tracked creator handle. */
+const LEADING_AT_RE = /^@/;
 
 /**
  * The baseline capabilities a typical platform supports in the fake. Comments
@@ -245,6 +249,47 @@ export class FakePlatformProvider implements PlatformProvider {
    * mention replies require `readComments` (the same gate the inbox UI applies).
    * Records the reply as a published post so tests can assert it landed.
    */
+  /**
+   * Deterministically synthesize a tracked creator's recent high-performing
+   * posts (U28). Requires the platform's `readEngagement` capability (the same
+   * gate "high-performing" reads imply); otherwise returns nothing so the radar
+   * degrades to ACP signal. Posts are seeded from the platform + handle so
+   * repeated reads return the same `externalId`s — which lets the radar's
+   * dedupe-on-cache be verified. Engagement is the same deterministic hash
+   * `readEngagement` uses, so the ranking is stable.
+   */
+  readCreatorTopPosts(
+    platform: Platform,
+    handle: string
+  ): Promise<ProviderCreatorPost[]> {
+    const caps = this.matrix[platform];
+    if (!caps?.readEngagement) {
+      return Promise.resolve([]);
+    }
+    const cleanHandle = handle.replace(LEADING_AT_RE, "");
+    const count = 3;
+    const posts: ProviderCreatorPost[] = [];
+    for (let index = 0; index < count; index++) {
+      const externalId = `fake_${platform}_${cleanHandle}_${index}`;
+      const seed = hashString(externalId);
+      posts.push({
+        externalId,
+        platform,
+        text: `@${cleanHandle} post #${index + 1}: a high-performing take on the niche.`,
+        permalink: `https://fake.local/${platform}/${cleanHandle}/${seed % 100_000}`,
+        engagement: {
+          likes: seed % 1000,
+          comments: seed % 137,
+          shares: seed % 53,
+          views: (seed % 1000) * 10,
+          fetchedAt: this.now(),
+        },
+        publishedAt: this.now() - (seed % 14) * 86_400_000,
+      });
+    }
+    return Promise.resolve(posts);
+  }
+
   replyToInboxItem(
     item: ProviderInboxItem,
     text: string

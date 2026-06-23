@@ -5,6 +5,7 @@ import {
   Inbox,
   type LucideIcon,
   PenLine,
+  Radar,
   Scissors,
   Settings,
   Swords,
@@ -69,6 +70,13 @@ export const NAV_SECTION_META: NavSectionMeta[] = [
     description:
       "A self-running loop that tests, scores, and keeps what works.",
     icon: Telescope,
+  },
+  {
+    id: "radar",
+    label: "Radar",
+    description:
+      "Track competitors and topics, and surface their winners and rising formats.",
+    icon: Radar,
   },
   {
     id: "templates",
