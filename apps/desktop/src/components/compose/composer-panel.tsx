@@ -19,6 +19,7 @@ import { ComposePreview, type PreviewGroup } from "./compose-preview";
 import { DraftsDialog } from "./drafts-dialog";
 import { HashtagSuggestions } from "./hashtag-suggestions";
 import { platformLabel } from "./platform-meta";
+import { ReformatPanel } from "./reformat-panel";
 import { SegmentEditor } from "./segment-editor";
 import { TargetPicker } from "./target-picker";
 
@@ -218,6 +219,8 @@ export function ComposerPanel() {
               platforms={selectedPlatforms}
               text={segments[0]?.text ?? ""}
             />
+
+            <ReformatPanel capabilityMatrix={capabilityMatrix} />
           </div>
 
           {/* Preview column */}

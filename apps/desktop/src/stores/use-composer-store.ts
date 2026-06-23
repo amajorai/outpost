@@ -17,6 +17,7 @@ import type {
   ComposeSegment,
   MediaAttachment,
 } from "@/lib/compose/platform-limits";
+import { reformatForPlatforms as reformatVariants } from "@/lib/compose/reformat";
 import { logger } from "@/lib/logger";
 import {
   type DraftBody,
@@ -46,6 +47,15 @@ interface ComposerState {
   selectedAccountIds: string[];
   /** All connected accounts available as targets. */
   accounts: SocialAccount[];
+  /**
+   * AI-reformatted per-platform variant text (U15), keyed by platform. When a
+   * selected account's platform has an entry here, scheduling sends that text as
+   * the target's `variantBody`; otherwise the shared draft text is used. Cleared
+   * on `reset()` and whenever the user edits the shared draft.
+   */
+  platformVariants: Record<string, string>;
+  /** True while an AI reformat run is in flight. */
+  isReformatting: boolean;
   /** The draft currently being edited, or null for an unsaved post. */
   draftId: string | null;
   /**
@@ -74,6 +84,19 @@ interface ComposerState {
   /** Move the segment at `index` one slot toward "up" or "down". */
   moveSegment: (index: number, direction: "up" | "down") => void;
   toggleAccount: (accountId: string) => void;
+  /**
+   * Reformat the current draft into per-platform variants via the configured
+   * ACP agent (U15). Populates `platformVariants` for each platform the agent
+   * returned and leaves the rest on the shared draft. Returns the run result so
+   * the caller can surface a toast; never throws.
+   */
+  reformat: (
+    capabilities: import("@/lib/providers").CapabilityMatrix | null
+  ) => Promise<import("@/lib/compose/reformat").ReformatResult>;
+  /** Set (or replace) the reviewed variant text for a platform. */
+  setPlatformVariant: (platform: string, text: string) => void;
+  /** Drop a platform's variant so it falls back to the shared draft text. */
+  clearPlatformVariant: (platform: string) => void;
   reset: () => void;
   /** Save (insert or update) the current draft. */
   save: () => Promise<void>;
@@ -118,6 +141,8 @@ export const useComposerStore = create<ComposerState>()((set, get) => ({
   media: [],
   selectedAccountIds: [],
   accounts: [],
+  platformVariants: {},
+  isReformatting: false,
   draftId: null,
   pendingScheduledAt: null,
   isSubmitting: false,
@@ -205,12 +230,52 @@ export const useComposerStore = create<ComposerState>()((set, get) => ({
         : [...state.selectedAccountIds, accountId],
     })),
 
+  reformat: async (capabilities) => {
+    const state = get();
+    const selectedPlatforms = [
+      ...new Set(
+        state.accounts
+          .filter((account) => state.selectedAccountIds.includes(account.id))
+          .map((account) => account.platform)
+      ),
+    ];
+    set({ isReformatting: true });
+    try {
+      const result = await reformatVariants(
+        state.segments[0]?.text ?? "",
+        selectedPlatforms,
+        capabilities
+      );
+      if (Object.keys(result.variants).length > 0) {
+        set((current) => ({
+          platformVariants: { ...current.platformVariants, ...result.variants },
+        }));
+      }
+      return result;
+    } finally {
+      set({ isReformatting: false });
+    }
+  },
+
+  setPlatformVariant: (platform, text) =>
+    set((state) => ({
+      platformVariants: { ...state.platformVariants, [platform]: text },
+    })),
+
+  clearPlatformVariant: (platform) =>
+    set((state) => {
+      const next = { ...state.platformVariants };
+      delete next[platform];
+      return { platformVariants: next };
+    }),
+
   reset: () =>
     set({
       segments: [{ text: "", media: [] }],
       text: "",
       media: [],
       selectedAccountIds: [],
+      platformVariants: {},
       draftId: null,
       error: null,
     }),
@@ -280,6 +345,9 @@ export const useComposerStore = create<ComposerState>()((set, get) => ({
         targets: selected.map((account) => ({
           socialAccountId: account.id,
           platform: account.platform,
+          // U15: an AI-reformatted variant for this platform overrides the
+          // shared draft text for just this target; omit to use the draft.
+          variantBody: state.platformVariants[account.platform] ?? null,
         })),
       });
       set({
