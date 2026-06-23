@@ -134,6 +134,15 @@ interface ComposerState {
   batchAddAtomizedToDrafts: (
     posts: import("@/lib/repurpose/atomize").AtomizedPost[]
   ) => Promise<number>;
+  /**
+   * Load freeform text into the composer for review (U27). Replaces the primary
+   * segment's text with `text`, selecting every connected account on `platform`
+   * when one is given (or none when that platform isn't connected). Resets
+   * variants/watermarks/draftId so it opens as a fresh unsaved post. Used to
+   * surface an autoresearch proposal's hook/body into the composer. Ensures
+   * accounts are loaded first so the selection isn't pruned.
+   */
+  loadText: (text: string, platform?: string) => Promise<void>;
   /** Save (insert or update) the current draft. */
   save: () => Promise<void>;
   /** Load a draft by id into the composer. */
@@ -364,6 +373,27 @@ export const useComposerStore = create<ComposerState>()((set, get) => ({
     }));
     set({
       ...withSegments(segments),
+      selectedAccountIds: accountIds,
+      platformVariants: {},
+      watermarkPlatforms: [],
+      draftId: null,
+      error: null,
+    });
+  },
+
+  loadText: async (text, platform) => {
+    // Ensure accounts are loaded before selecting, so the selection isn't pruned.
+    const state = get();
+    if (state.accounts.length === 0) {
+      await get().loadAccounts();
+    }
+    const accountIds = platform
+      ? get()
+          .accounts.filter((account) => account.platform === platform)
+          .map((account) => account.id)
+      : [];
+    set({
+      ...withSegments([{ text, media: [] }]),
       selectedAccountIds: accountIds,
       platformVariants: {},
       watermarkPlatforms: [],

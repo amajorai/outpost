@@ -13,6 +13,7 @@ export type NavSection =
   | "inbox"
   | "activity"
   | "experiments"
+  | "autoresearch"
   | "templates"
   | "settings";
 
@@ -24,6 +25,7 @@ export const NAV_SECTIONS: NavSection[] = [
   "inbox",
   "activity",
   "experiments",
+  "autoresearch",
   "templates",
   "settings",
 ];

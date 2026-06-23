@@ -370,3 +370,61 @@ export interface ExperimentResult {
   /** 1 when this variant won the experiment, else 0. */
   isWinner: number;
 }
+
+/**
+ * The user-editable strategy document that steers the autoresearch loop (U27).
+ *
+ * Modeled on karpathy/autoresearch's `program.md`: a single markdown document
+ * the user authors with goals, voice, niche, and guardrails. It is the "program"
+ * the loop runs against. The `goalMetric` + `observationWindowHours` on the same
+ * row turn the prose into a concrete experiment configuration: the markdown
+ * steers the AI proposal, the goal metric + window steer the U25 experiment that
+ * scores it. Workspace-scoped, one row per workspace. DDL lives in the
+ * v15 -> v16 migration in `lib/db.ts`.
+ */
+export interface AutoresearchStrategy {
+  workspaceId: string;
+  /** The markdown strategy doc (goals, voice, niche, guardrails). */
+  content: string;
+  /** The single hard metric every iteration is scored against. */
+  goalMetric: ExperimentGoalMetric;
+  /** Hours the challenger experiment observes before it is scored. */
+  observationWindowHours: number;
+  updatedAt: number;
+}
+
+/**
+ * The keep/discard verdict of one autoresearch iteration (U27). `kept` means the
+ * proposed challenger beat the running best metric and becomes the new best;
+ * `discarded` means it did not. `pending` is an iteration that has been proposed
+ * + started but not yet scored (the step boundary, so the loop is inspectable
+ * mid-flight without waiting real hours).
+ */
+export type AutoresearchDecision = "pending" | "kept" | "discarded";
+
+/**
+ * One iteration of the Karpathy-style autoresearch loop (U27): a single
+ * propose -> run experiment -> score -> keep/discard cycle, recorded whether it
+ * was kept or discarded so the whole history stays inspectable.
+ *
+ * Scopes through `workspaceId`. `experimentId` links to the U25 experiment the
+ * iteration ran to score its proposal; `metricValue` is that experiment's
+ * measured goal-metric value once scored (null while `pending`). `proposal` is a
+ * JSON blob ({@link AutoresearchProposalData}) so the proposal shape can evolve
+ * without a schema migration.
+ */
+export interface AutoresearchIteration {
+  id: string;
+  workspaceId: string;
+  /** 1-based position of this iteration within the workspace's loop. */
+  iterationNumber: number;
+  /** JSON-encoded {@link AutoresearchProposalData} the agent produced. */
+  proposal: string;
+  /** The U25 experiment this iteration ran to score the proposal, when started. */
+  experimentId: string | null;
+  /** The goal-metric value the experiment measured, or null while pending. */
+  metricValue: number | null;
+  /** The keep/discard verdict; `pending` until the iteration is scored. */
+  decision: AutoresearchDecision;
+  createdAt: number;
+}

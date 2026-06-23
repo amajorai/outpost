@@ -1,4 +1,5 @@
 import { ActivityPanel } from "@/components/activity/activity-panel";
+import { AutoresearchPanel } from "@/components/autoresearch/autoresearch-panel";
 import { CalendarPanel } from "@/components/calendar/calendar-panel";
 import { ComposerPanel } from "@/components/compose/composer-panel";
 import { ExperimentsPanel } from "@/components/experiments/experiments-panel";
@@ -40,6 +41,10 @@ export function SectionPanel({ section }: SectionPanelProps) {
 
   if (section === "experiments") {
     return <ExperimentsPanel />;
+  }
+
+  if (section === "autoresearch") {
+    return <AutoresearchPanel />;
   }
 
   if (section === "templates") {

@@ -8,6 +8,7 @@ import {
   Scissors,
   Settings,
   Swords,
+  Telescope,
   Wand2,
 } from "lucide-react";
 import type { NavSection } from "@/stores/use-navigation-store";
@@ -61,6 +62,13 @@ export const NAV_SECTION_META: NavSectionMeta[] = [
     label: "Experiments",
     description: "A/B your content and timing, then keep what wins.",
     icon: FlaskConical,
+  },
+  {
+    id: "autoresearch",
+    label: "Autoresearch",
+    description:
+      "A self-running loop that tests, scores, and keeps what works.",
+    icon: Telescope,
   },
   {
     id: "templates",

@@ -6,7 +6,7 @@ let db: Database | null = null;
 let dbInitPromise: Promise<Database> | null = null;
 
 // Bump this whenever you add a new migration below.
-const TARGET_SCHEMA_VERSION = 15;
+const TARGET_SCHEMA_VERSION = 16;
 
 /**
  * Pre-v10 domain tables that gain a `workspace_id` in the v10 migration.
@@ -503,6 +503,48 @@ const migrations: Record<number, MigrationFn> = {
     );
     await database.execute(
       "CREATE UNIQUE INDEX IF NOT EXISTS idx_experiment_results_variant ON experiment_results(experiment_id, variant_id)"
+    );
+  },
+  16: async (database) => {
+    // Autoresearch loop (U27). A Karpathy-autoresearch-style closed loop: a
+    // user-editable strategy document (the `program.md` analog) steers an AI
+    // agent that proposes one content change per iteration, runs it as a U25
+    // experiment over an observation window, scores ONE hard metric, and keeps
+    // or discards the change. Every iteration is recorded so the whole history
+    // stays inspectable.
+    //
+    // `autoresearch_strategy` is workspace-scoped with one row per workspace
+    // (workspace_id is the PRIMARY KEY): the strategy markdown plus the goal
+    // metric + observation window that turn the prose into a concrete experiment.
+    //
+    // `autoresearch_iterations` is workspace-scoped, one row per iteration. The
+    // proposal is a JSON blob so the proposal shape can evolve without a schema
+    // migration; experiment_id links to the U25 experiment that scored it
+    // (nullable while pending); decision is a TEXT enum, metric_value the scored
+    // goal-metric value (nullable while pending).
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS autoresearch_strategy (
+        workspace_id TEXT PRIMARY KEY,
+        content TEXT NOT NULL,
+        goal_metric TEXT NOT NULL,
+        observation_window_hours INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    `);
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS autoresearch_iterations (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        iteration_number INTEGER NOT NULL,
+        proposal TEXT NOT NULL,
+        experiment_id TEXT,
+        metric_value REAL,
+        decision TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_autoresearch_iterations_workspace ON autoresearch_iterations(workspace_id, iteration_number)"
     );
   },
 };
