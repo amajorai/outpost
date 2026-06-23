@@ -307,16 +307,23 @@ fn execute_acp_session(
     // 2. Create a session. Current ACP uses `session/new`; older adapters used
     // `newSession`, so keep a fallback for existing custom agent configs.
     let bridge_port = bridge_port(app);
+    let bridge_token = bridge_token(app);
     let cwd = std::env::current_dir()
         .ok()
         .map(|path| path.to_string_lossy().into_owned())
         .unwrap_or_default();
     let mcp_servers = if supports_http_mcp {
+        // The bridge requires the per-install token on every request, including
+        // the `/mcp` endpoint the agent calls. Pass it as a Bearer header so the
+        // in-app ACP tool-call flow keeps working after the bridge was hardened.
         serde_json::json!([{
             "name": "outpost",
             "type": "http",
             "url": format!("http://127.0.0.1:{bridge_port}/mcp"),
-            "headers": []
+            "headers": [{
+                "name": "Authorization",
+                "value": format!("Bearer {bridge_token}")
+            }]
         }])
     } else {
         serde_json::json!([])
@@ -540,6 +547,13 @@ fn bridge_port(app: &AppHandle) -> u16 {
                 .and_then(|n| u16::try_from(n).ok())
         })
         .unwrap_or(37842)
+}
+
+fn bridge_token(app: &AppHandle) -> String {
+    use tauri::Manager;
+    app.try_state::<crate::bridge_token::BridgeToken>()
+        .map(|state| state.0.clone())
+        .unwrap_or_default()
 }
 
 fn collect_agent_message_chunk(msg: &serde_json::Value, collected_text: &mut String) {

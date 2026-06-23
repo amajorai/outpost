@@ -6,6 +6,7 @@ use tauri_plugin_decorum::WebviewWindowExt;
 #[cfg(feature = "bria")]
 pub mod background_removal;
 pub mod acp;
+pub mod bridge_token;
 pub mod embeddings;
 pub mod http_bridge;
 pub mod secure_storage;
@@ -76,6 +77,13 @@ async fn fetch_as_base64(url: String) -> Result<String, String> {
 #[tauri::command]
 fn is_bria_available() -> bool {
     cfg!(feature = "bria")
+}
+
+/// Return the per-install HTTP bridge token so the Settings UI can display it
+/// for the user to copy into the browser extension / MCP client config.
+#[tauri::command]
+fn get_bridge_token(state: tauri::State<'_, bridge_token::BridgeToken>) -> String {
+    state.0.clone()
 }
 
 /// Whether this build includes the local (fastembed/ONNX) embedding engine.
@@ -209,6 +217,16 @@ pub fn run() {
             // Initialize ACP tool-call state
             app.manage(acp::AcpState::new());
 
+            // Generate / load the per-install bridge secret. Persisted under
+            // ~/.outpost/bridge-token so the local MCP server can read the same
+            // value, and exposed to the frontend via `get_bridge_token`.
+            let home_dir = app
+                .path()
+                .home_dir()
+                .unwrap_or_else(|_| app_data_dir.clone());
+            let bridge_secret = bridge_token::load_or_create(&home_dir);
+            app.manage(bridge_token::BridgeToken(bridge_secret.clone()));
+
             // Start local HTTP bridge for MCP clients
             let pending = app.state::<acp::AcpState>().pending.clone();
             let app_handle = app.handle().clone();
@@ -225,7 +243,7 @@ pub fn run() {
                 })
                 .unwrap_or(37842);
             tauri::async_runtime::spawn(async move {
-                http_bridge::start(pending, app_handle, port).await;
+                http_bridge::start(pending, app_handle, port, bridge_secret).await;
             });
 
             Ok(())
@@ -266,6 +284,7 @@ pub fn run() {
             embeddings::unload_embedding_models,
             fetch_as_base64,
             is_bria_available,
+            get_bridge_token,
             local_embeddings_available,
             import_backup,
             migrate_app_data,

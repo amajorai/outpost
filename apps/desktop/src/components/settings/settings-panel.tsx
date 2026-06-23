@@ -2,6 +2,7 @@ import { getSectionMeta } from "@/components/nav/sections";
 import { AccountsSettings } from "@/components/settings/accounts-settings";
 import { BlueskySettings } from "@/components/settings/bluesky-settings";
 import { BrandKitSettings } from "@/components/settings/brand-kit-settings";
+import { BridgeSettings } from "@/components/settings/bridge-settings";
 import { ComposioSettings } from "@/components/settings/composio-settings";
 import { SchedulerSettings } from "@/components/settings/scheduler-settings";
 import { ThreadsSettings } from "@/components/settings/threads-settings";
@@ -22,6 +23,7 @@ export function SettingsPanel() {
         <AccountsSettings />
         <BrandKitSettings />
         <SchedulerSettings />
+        <BridgeSettings />
       </div>
     </section>
   );

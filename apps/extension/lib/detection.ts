@@ -65,6 +65,13 @@ export const DETECTED_POST_MESSAGE = "outpost:detected-post" as const;
 /** Local desktop bridge ingest endpoint (Axum, see src-tauri/src/http_bridge.rs). */
 export const BRIDGE_INGEST_URL = "http://localhost:37842/api/detected-post";
 
+/**
+ * `browser.storage.local` key holding the desktop bridge token the user pastes
+ * into the extension popup. The bridge rejects any request without it, so this
+ * is a required one-time setup step (copy from Outpost → Settings).
+ */
+export const BRIDGE_TOKEN_STORAGE_KEY = "outpost:bridge-token";
+
 const MIN_POST_LENGTH = 1;
 const MAX_POST_LENGTH = 50_000;
 
