@@ -1,0 +1,154 @@
+/**
+ * Static per-platform composition limits (U8).
+ *
+ * The provider capability matrix (`PlatformCapabilities`) is booleans only —
+ * it answers "can this platform publish/read DMs", not "how long can a post be".
+ * Character counts and media format rules are platform facts that don't depend on
+ * the active provider, so they live here as a static map rather than on the
+ * provider contract. The composer reads this to render limits and to validate a
+ * post before allowing schedule.
+ *
+ * Numbers are deliberately conservative public limits; they're for client-side
+ * guard-railing, not a contractual guarantee. Missing a platform falls back to a
+ * permissive default so an unknown platform never hard-blocks composing.
+ */
+
+import type { Platform } from "@/lib/providers";
+
+/** The composition constraints for a single platform. */
+export interface PlatformLimits {
+  /** Maximum number of characters allowed in the post body. */
+  maxChars: number;
+  /** MIME type prefixes the platform accepts, e.g. "image/", "video/". */
+  allowedMimePrefixes: readonly string[];
+  /** Maximum number of media attachments per post. */
+  maxMedia: number;
+}
+
+/** A permissive fallback for any platform not explicitly listed. */
+export const DEFAULT_PLATFORM_LIMITS: PlatformLimits = {
+  maxChars: 5000,
+  allowedMimePrefixes: ["image/", "video/"],
+  maxMedia: 10,
+};
+
+const IMAGE_AND_VIDEO = ["image/", "video/"] as const;
+const IMAGE_ONLY = ["image/"] as const;
+const VIDEO_ONLY = ["video/"] as const;
+
+/** Per-platform limits. Keep keys in sync with the `Platform` union. */
+export const PLATFORM_LIMITS: Record<Platform, PlatformLimits> = {
+  x: { maxChars: 280, allowedMimePrefixes: IMAGE_AND_VIDEO, maxMedia: 4 },
+  instagram: {
+    maxChars: 2200,
+    allowedMimePrefixes: IMAGE_AND_VIDEO,
+    maxMedia: 10,
+  },
+  tiktok: { maxChars: 2200, allowedMimePrefixes: VIDEO_ONLY, maxMedia: 1 },
+  youtube: { maxChars: 5000, allowedMimePrefixes: VIDEO_ONLY, maxMedia: 1 },
+  linkedin: {
+    maxChars: 3000,
+    allowedMimePrefixes: IMAGE_AND_VIDEO,
+    maxMedia: 9,
+  },
+  reddit: {
+    maxChars: 40_000,
+    allowedMimePrefixes: IMAGE_AND_VIDEO,
+    maxMedia: 1,
+  },
+  facebook: {
+    maxChars: 63_206,
+    allowedMimePrefixes: IMAGE_AND_VIDEO,
+    maxMedia: 10,
+  },
+  bluesky: { maxChars: 300, allowedMimePrefixes: IMAGE_ONLY, maxMedia: 4 },
+  threads: {
+    maxChars: 500,
+    allowedMimePrefixes: IMAGE_AND_VIDEO,
+    maxMedia: 10,
+  },
+};
+
+/** Resolve the limits for a platform, falling back to a permissive default. */
+export function getPlatformLimits(platform: string): PlatformLimits {
+  return PLATFORM_LIMITS[platform as Platform] ?? DEFAULT_PLATFORM_LIMITS;
+}
+
+/** A single attached media item, as the composer holds it. */
+export interface MediaAttachment {
+  /** Local file path (the absolute path returned by the file dialog). */
+  path: string;
+  /** Best-effort MIME type derived from the file extension. */
+  mimeType: string;
+  /** Display file name. */
+  name: string;
+}
+
+/** A human-readable reason a target is invalid, or null when it's valid. */
+export type ValidationError = string | null;
+
+/**
+ * Validate a post body + media against one platform's limits. Returns the first
+ * blocking reason, or null when the target is publishable. The composer disables
+ * the schedule action and shows the reason while this is non-null.
+ */
+export function validateForPlatform(
+  platform: string,
+  text: string,
+  media: readonly MediaAttachment[]
+): ValidationError {
+  const limits = getPlatformLimits(platform);
+
+  const trimmedLength = text.trim().length;
+  if (trimmedLength === 0 && media.length === 0) {
+    return "Post is empty";
+  }
+
+  if (text.length > limits.maxChars) {
+    return `Over the ${limits.maxChars.toLocaleString()} character limit by ${(
+      text.length - limits.maxChars
+    ).toLocaleString()}`;
+  }
+
+  if (media.length > limits.maxMedia) {
+    return `Allows at most ${limits.maxMedia} ${
+      limits.maxMedia === 1 ? "attachment" : "attachments"
+    }`;
+  }
+
+  for (const item of media) {
+    const allowed = limits.allowedMimePrefixes.some((prefix) =>
+      item.mimeType.startsWith(prefix)
+    );
+    if (!allowed) {
+      return `Does not accept "${item.name}" (${item.mimeType || "unknown type"})`;
+    }
+  }
+
+  return null;
+}
+
+/** Map a file extension to a best-effort MIME type for validation/preview. */
+const EXTENSION_MIME: Record<string, string> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  webp: "image/webp",
+  avif: "image/avif",
+  heic: "image/heic",
+  mp4: "video/mp4",
+  mov: "video/quicktime",
+  webm: "video/webm",
+  m4v: "video/x-m4v",
+};
+
+/** Derive a MIME type from a file path's extension. */
+export function mimeTypeForPath(path: string): string {
+  const dot = path.lastIndexOf(".");
+  if (dot === -1) {
+    return "";
+  }
+  const ext = path.slice(dot + 1).toLowerCase();
+  return EXTENSION_MIME[ext] ?? "";
+}

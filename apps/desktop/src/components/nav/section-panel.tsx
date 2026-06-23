@@ -1,3 +1,4 @@
+import { ComposerPanel } from "@/components/compose/composer-panel";
 import { getSectionMeta } from "@/components/nav/sections";
 import { SettingsPanel } from "@/components/settings/settings-panel";
 import type { NavSection } from "@/stores/use-navigation-store";
@@ -9,6 +10,10 @@ interface SectionPanelProps {
 export function SectionPanel({ section }: SectionPanelProps) {
   if (section === "settings") {
     return <SettingsPanel />;
+  }
+
+  if (section === "compose") {
+    return <ComposerPanel />;
   }
 
   const { label, description, icon: Icon } = getSectionMeta(section);
