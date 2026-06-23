@@ -54,7 +54,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhBRkJGMTRFM0Y0QTA4MkQKUldRdENFby9Udkg3aWpzZDQwZ2hoWmhCU0ZBbmIybyt4eUdLVmdyZGFIR0xSTTA5Mld3ZHZqMWcK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERCOTlGNkZDRjlGQUY4NzgKUldSNCtQcjUvUGFaMi8vL0xLNFh2eGtBbEVlZEpibWdnTENzUmovOWpidW1rQ2VsZkM1UXVaV0MK",
       "endpoints": [
         "https://github.com/amajorai/outpost/releases/latest/download/latest.json"
       ]
