@@ -12,7 +12,6 @@ pub mod http_bridge;
 pub mod secure_storage;
 pub mod security;
 pub mod upscale;
-pub mod youtube_oauth;
 
 #[tauri::command]
 async fn migrate_app_data(app: tauri::AppHandle) -> Result<bool, String> {
@@ -291,9 +290,6 @@ pub fn run() {
             upscale::upscaler_status,
             upscale::download_upscaler,
             upscale::upscale_image,
-            youtube_oauth::youtube_oauth_initiate,
-            youtube_oauth::youtube_token_refresh,
-            youtube_oauth::youtube_oauth_revoke,
             #[cfg(feature = "bria")]
             background_removal::bria_model_status,
             #[cfg(feature = "bria")]
