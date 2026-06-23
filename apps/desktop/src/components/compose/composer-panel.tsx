@@ -17,9 +17,13 @@ import { useComposerStore } from "@/stores/use-composer-store";
 import { useIntegrationStore } from "@/stores/use-integration-store";
 import { ComposePreview, type PreviewGroup } from "./compose-preview";
 import { DraftsDialog } from "./drafts-dialog";
+import { HashtagSuggestions } from "./hashtag-suggestions";
 import { platformLabel } from "./platform-meta";
 import { SegmentEditor } from "./segment-editor";
 import { TargetPicker } from "./target-picker";
+
+/** Matches one or more whitespace chars; top-level per lint/performance. */
+const WHITESPACE_RE = /\s+/;
 
 /** Format a date as a `datetime-local` value (YYYY-MM-DDTHH:mm) in local time. */
 function toScheduleValue(date: Date): string {
@@ -92,6 +96,28 @@ export function ComposerPanel() {
       accountLabels,
     }));
   }, [selectedAccounts]);
+
+  // Distinct platforms across the selected accounts, for hashtag research (U14).
+  const selectedPlatforms = useMemo(
+    () => [...new Set(selectedAccounts.map((a) => a.platform))],
+    [selectedAccounts]
+  );
+
+  // Insert a researched hashtag/keyword into the primary segment. Dedupes so a
+  // repeated click is a no-op, and adds a separating space when needed. We only
+  // target segments[0] (the primary post) to keep insertion unambiguous.
+  const handleInsertSuggestion = useCallback(
+    (value: string) => {
+      const current = segments[0]?.text ?? "";
+      const tokens = current.split(WHITESPACE_RE);
+      if (tokens.includes(value)) {
+        return;
+      }
+      const needsSpace = current.length > 0 && !current.endsWith(" ");
+      setText(`${current}${needsSpace ? " " : ""}${value}`, 0);
+    },
+    [segments, setText]
+  );
 
   // Validate against every selected platform. The first failing platform's
   // reason gates scheduling, with the platform name for clarity.
@@ -186,6 +212,12 @@ export function ComposerPanel() {
                 selectedAccountIds={selectedAccountIds}
               />
             </div>
+
+            <HashtagSuggestions
+              onInsert={handleInsertSuggestion}
+              platforms={selectedPlatforms}
+              text={segments[0]?.text ?? ""}
+            />
           </div>
 
           {/* Preview column */}
