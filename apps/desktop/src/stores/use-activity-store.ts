@@ -87,7 +87,11 @@ export async function buildActivityUpserts(
         { err: error, accountId: account.id, remoteId: target.remoteId },
         "[Activity] Failed to read engagement for post"
       );
-      upserts.push(base);
+      // A transient read failure must not clobber metrics we already stored:
+      // the upsert overwrites counts unconditionally, and `base` has none. Skip
+      // it so the existing row's last-known counts survive until the next
+      // successful read. (The capability-off degrade above still tracks the
+      // post with zeroed counts, since that's a first-class "no metrics" state.)
     }
   }
   return upserts;
