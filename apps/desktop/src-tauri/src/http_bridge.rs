@@ -149,6 +149,50 @@ async fn call_tool(
     }
 }
 
+/// Ingest endpoint for the browser extension (Unit U18).
+///
+/// The extension's background script POSTs a detected user-authored post here.
+/// To avoid a CORS preflight from the extension's service worker, the body is
+/// sent as `text/plain` and parsed manually rather than via the `Json` extractor
+/// (which would require an `application/json` content type).
+///
+/// For this unit we only receive the payload and re-emit it as a `detected-post`
+/// Tauri event. Unit U19 consumes the event to drive optional cross-posting.
+async fn handle_detected_post(State(s): State<HttpBridgeState>, raw_body: String) -> Response {
+    let payload: serde_json::Value = match serde_json::from_str(&raw_body) {
+        Ok(value) => value,
+        Err(err) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "ok": false,
+                    "error": format!("Invalid JSON body: {err}"),
+                })),
+            )
+                .into_response();
+        }
+    };
+
+    let emit_result = s.app.emit("detected-post", &payload);
+
+    if emit_result.is_err() {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "ok": false,
+                "error": "Failed to emit detected-post event",
+            })),
+        )
+            .into_response();
+    }
+
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({ "ok": true })),
+    )
+        .into_response()
+}
+
 async fn handle_mcp(State(s): State<HttpBridgeState>, Json(body): Json<McpRequest>) -> Response {
     let id = body.id.unwrap_or(serde_json::Value::Null);
     let response = match body.method.as_str() {
@@ -235,6 +279,7 @@ pub async fn start(
         .route("/api/tools", get(handle_list_tools))
         .route("/api/tools/call", post(handle_tool_call))
         .route("/mcp", post(handle_mcp))
+        .route("/api/detected-post", post(handle_detected_post))
         .with_state(state);
 
     let addr = std::net::SocketAddr::from(([127, 0, 0, 1], port));
