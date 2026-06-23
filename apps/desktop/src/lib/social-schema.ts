@@ -51,6 +51,14 @@ export interface Draft {
 
 export type ScheduledPostStatus =
   | "scheduled"
+  /**
+   * Marked by the local scheduler when `scheduledFor <= now`. This is the
+   * handoff state between the scheduler (U9) and the publish pipeline (U10):
+   * the scheduler transitions `scheduled -> due` and emits the row, then U10
+   * picks it up and moves it to `publishing`. Added as an additive enum value
+   * on the TEXT `status` column — no DDL change, so no `user_version` bump.
+   */
+  | "due"
   | "publishing"
   | "published"
   | "failed"

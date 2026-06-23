@@ -4,6 +4,7 @@ import { AppShell } from "@/components/nav/app-shell";
 import { Toaster } from "@/components/ui/sonner";
 import { VersionGateModal } from "@/components/VersionGateModal";
 import { useAppUpdater } from "@/hooks/use-app-updater";
+import { useScheduler } from "@/hooks/use-scheduler";
 import { useWindowBounds } from "@/hooks/use-window-bounds";
 import { setAxiomLoggingEnabled } from "@/lib/logger";
 import { runMigrations } from "@/lib/migration";
@@ -19,6 +20,11 @@ function UpdateChecker() {
 
 function WindowBoundsManager() {
   useWindowBounds();
+  return null;
+}
+
+function SchedulerManager() {
+  useScheduler();
   return null;
 }
 
@@ -95,6 +101,7 @@ export default function App() {
       <UpdateChecker />
       <VersionGateModal />
       <WindowBoundsManager />
+      <SchedulerManager />
     </>
   );
 }

@@ -464,41 +464,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "outpost"
-version = "1.5.3"
-dependencies = [
- "aes-gcm",
- "axum",
- "base64 0.22.1",
- "fastembed",
- "futures-util",
- "image",
- "once_cell",
- "ort",
- "rand 0.8.5",
- "reqwest",
- "rusqlite",
- "serde",
- "serde_json",
- "sha2",
- "sqlite-vec",
- "tauri",
- "tauri-build",
- "tauri-plugin-autostart",
- "tauri-plugin-decorum",
- "tauri-plugin-deep-link",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-opener",
- "tauri-plugin-process",
- "tauri-plugin-sql",
- "tauri-plugin-store",
- "tauri-plugin-updater",
- "tokio",
- "zip 2.4.2",
-]
-
-[[package]]
 name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4047,6 +4012,41 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.17",
+]
+
+[[package]]
+name = "outpost"
+version = "1.5.3"
+dependencies = [
+ "aes-gcm",
+ "axum",
+ "base64 0.22.1",
+ "fastembed",
+ "futures-util",
+ "image",
+ "once_cell",
+ "ort",
+ "rand 0.8.5",
+ "reqwest",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sqlite-vec",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-autostart",
+ "tauri-plugin-decorum",
+ "tauri-plugin-deep-link",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-opener",
+ "tauri-plugin-process",
+ "tauri-plugin-sql",
+ "tauri-plugin-store",
+ "tauri-plugin-updater",
+ "tokio",
+ "zip 2.4.2",
 ]
 
 [[package]]

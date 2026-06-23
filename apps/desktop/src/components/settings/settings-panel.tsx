@@ -1,5 +1,6 @@
 import { getSectionMeta } from "@/components/nav/sections";
 import { ComposioSettings } from "@/components/settings/composio-settings";
+import { SchedulerSettings } from "@/components/settings/scheduler-settings";
 
 export function SettingsPanel() {
   const { label, description } = getSectionMeta("settings");
@@ -12,6 +13,7 @@ export function SettingsPanel() {
           <p className="text-muted-foreground text-sm">{description}</p>
         </header>
         <ComposioSettings />
+        <SchedulerSettings />
       </div>
     </section>
   );

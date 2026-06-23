@@ -1,3 +1,8 @@
+import {
+  disable as disableAutostart,
+  enable as enableAutostart,
+  isEnabled as isAutostartEnabled,
+} from "@tauri-apps/plugin-autostart";
 import { load } from "@tauri-apps/plugin-store";
 import { create } from "zustand";
 import { logger } from "@/lib/logger";
@@ -77,6 +82,12 @@ interface AppSettingsState {
   experimentalFeaturesEnabled: boolean;
   soundsEnabled: boolean;
   mcpPort: number;
+  /**
+   * Whether Outpost launches on login. The OS autostart registration is the
+   * source of truth (the user can change it externally), so this mirrors the
+   * plugin's `isEnabled()` rather than a persisted boolean alone.
+   */
+  autostartEnabled: boolean;
   isInitialLoadDone: boolean;
 
   // Actions
@@ -107,7 +118,21 @@ interface AppSettingsState {
   setExperimentalFeaturesEnabled: (enabled: boolean) => Promise<void>;
   setSoundsEnabled: (enabled: boolean) => Promise<void>;
   setMcpPort: (port: number) => Promise<void>;
+  setAutostartEnabled: (enabled: boolean) => Promise<void>;
   loadSettings: () => Promise<void>;
+}
+
+/**
+ * Read the OS autostart state, treating any failure as "not enabled". The OS
+ * registration is the source of truth for whether Outpost launches on login.
+ */
+async function readAutostartEnabled(): Promise<boolean> {
+  try {
+    return await isAutostartEnabled();
+  } catch (err) {
+    logger.error({ err }, "[Settings] Failed to read autostart state from OS");
+    return false;
+  }
 }
 
 export const useAppSettingsStore = create<AppSettingsState>()((set, _get) => ({
@@ -136,6 +161,7 @@ export const useAppSettingsStore = create<AppSettingsState>()((set, _get) => ({
   experimentalFeaturesEnabled: false,
   soundsEnabled: true,
   mcpPort: 37_842,
+  autostartEnabled: false,
   isInitialLoadDone: false,
 
   setPreviewSeasonTheme: (theme) => set({ previewSeasonTheme: theme }),
@@ -553,6 +579,24 @@ export const useAppSettingsStore = create<AppSettingsState>()((set, _get) => ({
     }
   },
 
+  setAutostartEnabled: async (enabled: boolean) => {
+    try {
+      if (enabled) {
+        await enableAutostart();
+      } else {
+        await disableAutostart();
+      }
+      // Re-read from the OS so our state reflects what actually took effect.
+      const actual = await isAutostartEnabled();
+      set({ autostartEnabled: actual });
+    } catch (error) {
+      logger.error(
+        { err: error },
+        "[Settings] Failed to save setting: autostartEnabled"
+      );
+    }
+  },
+
   loadSettings: async () => {
     try {
       logger.info("[Settings] Loading app settings...");
@@ -621,6 +665,11 @@ export const useAppSettingsStore = create<AppSettingsState>()((set, _get) => ({
       const soundsEnabled = await store.get<boolean>(SOUNDS_ENABLED_FIELD);
       const mcpPort = await store.get<number>(MCP_PORT_FIELD);
 
+      // The OS autostart registration is the source of truth — the user may
+      // have toggled it outside the app — so read it directly rather than
+      // trusting a persisted boolean.
+      const autostartEnabled = await readAutostartEnabled();
+
       const finalTheme = theme ?? "dark";
 
       set({
@@ -648,6 +697,7 @@ export const useAppSettingsStore = create<AppSettingsState>()((set, _get) => ({
         experimentalFeaturesEnabled: experimentalFeaturesEnabled ?? false,
         soundsEnabled: soundsEnabled ?? true,
         mcpPort: mcpPort ?? 37_842,
+        autostartEnabled,
         isInitialLoadDone: true,
       });
 
