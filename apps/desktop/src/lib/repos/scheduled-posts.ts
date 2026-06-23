@@ -191,3 +191,34 @@ export async function listPostTargets(
   );
   return rows.map(mapPostTargetRow);
 }
+
+/**
+ * Advance a scheduled post's lifecycle status (e.g. `due -> publishing` or
+ * `publishing -> published`/`partial`/`failed`). The publish pipeline (U10)
+ * owns these transitions; the type forces a valid literal.
+ */
+export async function updateScheduledPostStatus(
+  scheduledPostId: string,
+  status: ScheduledPostStatus
+): Promise<void> {
+  const db = await getDb();
+  await db.execute("UPDATE scheduled_posts SET status = $1 WHERE id = $2", [
+    status,
+    scheduledPostId,
+  ]);
+}
+
+/**
+ * Advance a single target's status. The publish pipeline moves each target
+ * `pending -> publishing -> published`/`failed` as it works through the fan-out.
+ */
+export async function updatePostTargetStatus(
+  postTargetId: string,
+  status: PostTarget["status"]
+): Promise<void> {
+  const db = await getDb();
+  await db.execute("UPDATE post_targets SET status = $1 WHERE id = $2", [
+    status,
+    postTargetId,
+  ]);
+}

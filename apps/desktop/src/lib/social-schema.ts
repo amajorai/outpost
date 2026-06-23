@@ -61,6 +61,13 @@ export type ScheduledPostStatus =
   | "due"
   | "publishing"
   | "published"
+  /**
+   * Some targets published and some failed. Set by the publish pipeline (U10)
+   * when a fan-out post had mixed per-target results. Added as an additive enum
+   * value on the TEXT `status` column — same precedent as `due` above, so no DDL
+   * change and no `user_version` bump (additive-only per CLAUDE.md).
+   */
+  | "partial"
   | "failed"
   | "cancelled";
 
