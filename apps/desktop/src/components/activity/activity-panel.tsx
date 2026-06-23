@@ -13,6 +13,7 @@
 
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { formatDistanceToNow } from "date-fns";
 import {
   Activity,
@@ -24,6 +25,7 @@ import {
   Repeat2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { AnalyticsPanel } from "@/components/activity/analytics-panel";
 import { platformLabel } from "@/components/compose/platform-meta";
 import { getSectionMeta } from "@/components/nav/sections";
 import type { ActivityItem, SocialAccount } from "@/lib/social-schema";
@@ -142,8 +144,12 @@ function accountOptions(items: ActivityItem[], accounts: SocialAccount[]) {
   ];
 }
 
-export function ActivityPanel() {
-  const { label, description } = getSectionMeta("activity");
+/**
+ * The published-posts feed: the original Activity view, now one tab. Renders
+ * from the store; the parent owns the `refresh()` lifecycle so switching tabs
+ * never refetches.
+ */
+function FeedView() {
   const items = useActivityStore((s) => s.items);
   const accounts = useActivityStore((s) => s.accounts);
   const isLoading = useActivityStore((s) => s.isLoading);
@@ -151,10 +157,6 @@ export function ActivityPanel() {
 
   const [platformFilter, setPlatformFilter] = useState(ALL);
   const [accountFilter, setAccountFilter] = useState(ALL);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
 
   const filtered = useMemo(
     () =>
@@ -171,12 +173,8 @@ export function ActivityPanel() {
   const isEmpty = filtered.length === 0;
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-4 sm:px-6">
-      <header className="flex items-center justify-between gap-4 pb-4">
-        <div>
-          <h1 className="font-semibold text-xl tracking-tight">{label}</h1>
-          <p className="text-muted-foreground text-sm">{description}</p>
-        </div>
+    <div className="flex min-h-0 flex-col">
+      <div className="flex items-center justify-end pb-3">
         <Button
           disabled={isLoading}
           onClick={() => refresh()}
@@ -190,7 +188,7 @@ export function ActivityPanel() {
           )}
           Refresh
         </Button>
-      </header>
+      </div>
 
       <div className="flex flex-col gap-2 pb-4">
         <FilterPills
@@ -205,26 +203,68 @@ export function ActivityPanel() {
         />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {isEmpty ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-              <Activity className="size-6" strokeWidth={1.5} />
-            </div>
-            <p className="max-w-sm text-balance text-muted-foreground text-sm">
-              {isLoading
-                ? "Loading your activity…"
-                : "No published posts yet. Once you publish from Outpost, your posts and their engagement will appear here."}
-            </p>
+      {isEmpty ? (
+        <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
+          <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+            <Activity className="size-6" strokeWidth={1.5} />
           </div>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {filtered.map((item) => (
-              <ActivityRow item={item} key={item.id} />
-            ))}
-          </ul>
-        )}
-      </div>
+          <p className="max-w-sm text-balance text-muted-foreground text-sm">
+            {isLoading
+              ? "Loading your activity…"
+              : "No published posts yet. Once you publish from Outpost, your posts and their engagement will appear here."}
+          </p>
+        </div>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {filtered.map((item) => (
+            <ActivityRow item={item} key={item.id} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+const FEED_TAB = "feed";
+const ANALYTICS_TAB = "analytics";
+
+export function ActivityPanel() {
+  const { label, description } = getSectionMeta("activity");
+  const refresh = useActivityStore((s) => s.refresh);
+  const [tab, setTab] = useState(FEED_TAB);
+
+  // The shell owns the refresh lifecycle so the feed and analytics tabs share
+  // one load and switching between them never refetches against an empty store.
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return (
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-4 sm:px-6">
+      <header className="pb-4">
+        <h1 className="font-semibold text-xl tracking-tight">{label}</h1>
+        <p className="text-muted-foreground text-sm">{description}</p>
+      </header>
+
+      <Tabs
+        className="flex min-h-0 flex-1 flex-col"
+        onValueChange={(value) => setTab(value as string)}
+        value={tab}
+      >
+        <TabsList className="self-start">
+          <TabsTrigger value={FEED_TAB}>Feed</TabsTrigger>
+          <TabsTrigger value={ANALYTICS_TAB}>Analytics</TabsTrigger>
+        </TabsList>
+
+        <div className="min-h-0 flex-1 overflow-y-auto pt-4">
+          <TabsContent value={FEED_TAB}>
+            <FeedView />
+          </TabsContent>
+          <TabsContent value={ANALYTICS_TAB}>
+            <AnalyticsPanel />
+          </TabsContent>
+        </div>
+      </Tabs>
     </section>
   );
 }
