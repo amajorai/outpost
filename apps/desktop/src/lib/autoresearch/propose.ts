@@ -20,6 +20,11 @@ import { acpPrompt } from "@/lib/acp-client";
 import type { AutoresearchProposalData } from "@/lib/autoresearch/loop";
 import { logger } from "@/lib/logger";
 import { listActivityItems } from "@/lib/repos/activity-items";
+import { decodeDraftBody } from "@/lib/repos/drafts";
+import {
+  type ExperimentWinner,
+  listExperimentWinners,
+} from "@/lib/repos/experiments";
 import {
   getVoiceProfile,
   type VoiceProfileData,
@@ -93,6 +98,31 @@ function winnersGuidance(
   return lines.join("\n");
 }
 
+/**
+ * Build the experiment-winners guidance block: the loop's own past winners
+ * (winning variants from prior experiments), so it learns from what it already
+ * tested rather than only from organic activity. Empty string when there is no
+ * experiment history, so absence contributes nothing to the prompt.
+ */
+function experimentWinnersGuidance(winners: ExperimentWinner[]): string {
+  const usable = winners
+    .map((winner) => ({
+      text: decodeDraftBody(winner.draftBody).text.trim().replace(/\s+/g, " "),
+      metricValue: winner.metricValue,
+      goalMetric: winner.goalMetric,
+    }))
+    .filter((winner) => winner.text.length > 0)
+    .slice(0, MAX_WINNERS);
+  if (usable.length === 0) {
+    return "";
+  }
+  const lines = ["", "Winning posts from prior experiments (highest first):"];
+  for (const winner of usable) {
+    lines.push(`- (${winner.goalMetric}=${winner.metricValue}) ${winner.text}`);
+  }
+  return lines.join("\n");
+}
+
 /** The voice-profile guidance block, or "" when no usable profile is present. */
 function voiceGuidance(voice: VoiceProfileData | null): string {
   if (!voice) {
@@ -116,7 +146,8 @@ function voiceGuidance(voice: VoiceProfileData | null): string {
 function buildPrompt(
   strategy: AutoresearchStrategy,
   voice: VoiceProfileData | null,
-  winners: ActivityItem[]
+  winners: ActivityItem[],
+  experimentWinners: ExperimentWinner[]
 ): string {
   return [
     "You are a growth strategist running a closed experimentation loop. Propose",
@@ -129,6 +160,7 @@ function buildPrompt(
     strategy.content,
     voiceGuidance(voice),
     winnersGuidance(winners, strategy.goalMetric),
+    experimentWinnersGuidance(experimentWinners),
     "",
     "Respond with ONLY a JSON object, no prose and no code fences, of the form:",
     '{ "hook": "<the opening line/hook>", "body": "<the full candidate post',
@@ -206,9 +238,24 @@ export async function proposeChange(
     logger.error({ err: error }, "[Autoresearch] Failed to read activity");
   }
 
+  // The loop's own past winners close the feedback loop: it learns from the
+  // experiments it already ran, not just from organic activity.
+  let experimentWinners: ExperimentWinner[] = [];
+  try {
+    experimentWinners = await listExperimentWinners(workspaceId);
+  } catch (error) {
+    logger.error(
+      { err: error },
+      "[Autoresearch] Failed to read experiment winners"
+    );
+  }
+
   let raw: string;
   try {
-    raw = await acpPrompt(agent, buildPrompt(strategy, voice, winners));
+    raw = await acpPrompt(
+      agent,
+      buildPrompt(strategy, voice, winners, experimentWinners)
+    );
   } catch (error) {
     logger.error({ err: error }, "[Autoresearch] Agent proposal failed");
     return { proposal: null, failure: "agent-error" };

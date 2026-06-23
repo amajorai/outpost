@@ -243,6 +243,46 @@ export async function listExperimentVariants(
   return rows.map(mapVariantRow);
 }
 
+/** A past winning variant: its measured metric paired with its post body. */
+export interface ExperimentWinner {
+  /** The winning variant's goal-metric value at measurement time. */
+  metricValue: number;
+  /** The winning variant's JSON-encoded draft body. */
+  draftBody: string;
+  /** The goal metric the parent experiment optimized for. */
+  goalMetric: ExperimentGoalMetric;
+}
+
+/**
+ * List a workspace's past experiment winners, highest metric first. Joins each
+ * winning `experiment_results` row to its `experiment_variants` body and its
+ * parent experiment's goal metric, so the autoresearch loop can learn from what
+ * already won. Scoped through the parent experiment's workspace.
+ */
+export async function listExperimentWinners(
+  workspaceId: string = DEFAULT_WORKSPACE_ID,
+  limit = 5
+): Promise<ExperimentWinner[]> {
+  const db = await getDb();
+  const rows = await db.select<
+    { metric_value: number; draft_body: string; goal_metric: string }[]
+  >(
+    `SELECT r.metric_value, v.draft_body, e.goal_metric
+     FROM experiment_results r
+     JOIN experiment_variants v ON v.id = r.variant_id
+     JOIN experiments e ON e.id = r.experiment_id
+     WHERE r.is_winner = 1 AND e.workspace_id = $1
+     ORDER BY r.metric_value DESC
+     LIMIT $2`,
+    [workspaceId, limit]
+  );
+  return rows.map((row) => ({
+    metricValue: row.metric_value,
+    draftBody: row.draft_body,
+    goalMetric: row.goal_metric as ExperimentGoalMetric,
+  }));
+}
+
 /** List the recorded results of an experiment. */
 export async function listExperimentResults(
   experimentId: string
