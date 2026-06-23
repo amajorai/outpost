@@ -116,13 +116,42 @@ export interface PostHistory {
   publishedAt: number | null;
 }
 
-/** A reusable post body template scoped to a workspace. */
+/**
+ * A reusable post body template scoped to a workspace (U16).
+ *
+ * The `body` column is a JSON blob (a versioned {@link TemplateBody}, defined in
+ * `lib/repos/templates.ts`) so a template can carry its text plus optional
+ * per-platform default overrides without a schema migration — the same approach
+ * `drafts.body` uses for `DraftBody`. A legacy plain-text body decodes as a
+ * text-only template, so older rows keep working.
+ */
 export interface Template {
   id: string;
   workspaceId: string;
   name: string;
+  /** JSON-encoded {@link TemplateBody} (text + optional platform defaults). */
   body: string;
   createdAt: number;
+}
+
+/**
+ * A learned writing-voice profile for a workspace (U16).
+ *
+ * A per-workspace singleton (one row per workspace, keyed by a UNIQUE
+ * `workspace_id`) derived from the user's past posts via the ACP agent. Its
+ * derived content (a human-readable summary plus structured traits) is a single
+ * JSON `profile` blob so the shape can evolve without a SQLite migration —
+ * mirroring `brand_kit`. The matching DDL lives in the v12 -> v13 migration in
+ * `lib/db.ts`. The concrete blob shape (`VoiceProfileData`) lives in
+ * `lib/repos/voice-profile.ts`.
+ */
+export interface VoiceProfile {
+  id: string;
+  workspaceId: string;
+  /** JSON-encoded voice profile data (summary + traits). */
+  profile: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 /** The kind of a saved media asset, derived from its MIME type. */

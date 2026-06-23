@@ -3,6 +3,7 @@ import { ComposerPanel } from "@/components/compose/composer-panel";
 import { InboxPanel } from "@/components/inbox/inbox-panel";
 import { getSectionMeta } from "@/components/nav/sections";
 import { SettingsPanel } from "@/components/settings/settings-panel";
+import { TemplatesPanel } from "@/components/templates/templates-panel";
 import type { NavSection } from "@/stores/use-navigation-store";
 
 interface SectionPanelProps {
@@ -24,6 +25,10 @@ export function SectionPanel({ section }: SectionPanelProps) {
 
   if (section === "inbox") {
     return <InboxPanel />;
+  }
+
+  if (section === "templates") {
+    return <TemplatesPanel />;
   }
 
   const { label, description, icon: Icon } = getSectionMeta(section);

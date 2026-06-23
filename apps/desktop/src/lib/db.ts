@@ -6,7 +6,7 @@ let db: Database | null = null;
 let dbInitPromise: Promise<Database> | null = null;
 
 // Bump this whenever you add a new migration below.
-const TARGET_SCHEMA_VERSION = 12;
+const TARGET_SCHEMA_VERSION = 13;
 
 /**
  * Pre-v10 domain tables that gain a `workspace_id` in the v10 migration.
@@ -395,6 +395,27 @@ const migrations: Record<number, MigrationFn> = {
     `);
     await database.execute(
       "CREATE INDEX IF NOT EXISTS idx_activity_items_workspace ON activity_items(workspace_id, published_at)"
+    );
+  },
+  13: async (database) => {
+    // Voice/style learning (U16). A voice profile is a per-workspace singleton
+    // (one row per workspace, keyed by a UNIQUE `workspace_id`) — the same shape
+    // as `brand_kit` (v11). Its derived content (a tone/length/emoji/hook
+    // summary plus structured traits) lives in a single JSON `profile` blob so
+    // the shape can evolve without another SQLite migration.
+    //
+    // Templates already have a table (v10) — no template DDL here.
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS voice_profile (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL UNIQUE,
+        profile TEXT NOT NULL DEFAULT '{}',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_voice_profile_workspace ON voice_profile(workspace_id)"
     );
   },
 };

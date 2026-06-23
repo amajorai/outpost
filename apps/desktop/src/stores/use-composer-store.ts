@@ -28,6 +28,7 @@ import {
 } from "@/lib/repos/drafts";
 import { createScheduledPost } from "@/lib/repos/scheduled-posts";
 import { listSocialAccounts } from "@/lib/repos/social-accounts";
+import { decodeTemplateBody, getTemplate } from "@/lib/repos/templates";
 import { runSweep } from "@/lib/scheduler/scheduler";
 import type { SocialAccount } from "@/lib/social-schema";
 
@@ -107,6 +108,14 @@ interface ComposerState {
   /** Toggle whether the brand watermark applies to a platform for this post. */
   toggleWatermarkPlatform: (platform: string) => void;
   reset: () => void;
+  /**
+   * Apply a saved template (U16) into the current draft. Replaces the primary
+   * segment's text with the template body and seeds any per-platform default
+   * text into `platformVariants`. Leaves selected accounts and other segments
+   * untouched so applying a template into an in-progress post is non-destructive
+   * beyond the primary text.
+   */
+  applyTemplate: (templateId: string) => Promise<void>;
   /** Save (insert or update) the current draft. */
   save: () => Promise<void>;
   /** Load a draft by id into the composer. */
@@ -297,6 +306,29 @@ export const useComposerStore = create<ComposerState>()((set, get) => ({
       draftId: null,
       error: null,
     }),
+
+  applyTemplate: async (templateId) => {
+    try {
+      const template = await getTemplate(templateId);
+      if (!template) {
+        return;
+      }
+      const body = decodeTemplateBody(template.body);
+      const defaults = body.platformDefaults ?? {};
+      set((state) => ({
+        ...withSegments(
+          state.segments.map((segment, i) =>
+            i === 0 ? { ...segment, text: body.text } : segment
+          )
+        ),
+        // Seed per-platform variants from the template's defaults; leave any the
+        // template doesn't specify on the shared draft text.
+        platformVariants: { ...state.platformVariants, ...defaults },
+      }));
+    } catch (error) {
+      logger.error({ err: error }, "[Composer] Failed to apply template");
+    }
+  },
 
   save: async () => {
     const state = get();

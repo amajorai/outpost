@@ -23,6 +23,7 @@ import { platformLabel } from "./platform-meta";
 import { ReformatPanel } from "./reformat-panel";
 import { SegmentEditor } from "./segment-editor";
 import { TargetPicker } from "./target-picker";
+import { TemplatesDialog } from "./templates-dialog";
 import { WatermarkControls } from "./watermark-controls";
 
 /** Matches one or more whitespace chars; top-level per lint/performance. */
@@ -204,7 +205,10 @@ export function ComposerPanel() {
             <h1 className="font-semibold text-2xl tracking-tight">{label}</h1>
             <p className="text-muted-foreground text-sm">{description}</p>
           </div>
-          <DraftsDialog />
+          <div className="flex items-center gap-1">
+            <TemplatesDialog />
+            <DraftsDialog />
+          </div>
         </header>
 
         <div className="grid gap-8 lg:grid-cols-2">

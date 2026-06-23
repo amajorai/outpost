@@ -21,6 +21,10 @@ import { acpPrompt } from "@/lib/acp-client";
 import { getPlatformLimits } from "@/lib/compose/platform-limits";
 import { logger } from "@/lib/logger";
 import type { CapabilityMatrix, Platform } from "@/lib/providers";
+import {
+  getVoiceProfile,
+  type VoiceProfileData,
+} from "@/lib/repos/voice-profile";
 import { useAppSettingsStore } from "@/stores/use-app-settings-store";
 
 /** Strip a leading/trailing markdown code fence the agent may wrap JSON in. */
@@ -69,10 +73,38 @@ function platformGuidance(
   ].join(" ");
 }
 
+/**
+ * Build the voice-profile guidance block, or an empty string when no profile is
+ * present. Absence must not change behavior (Data Versioning Contract), so when
+ * there's no profile this contributes nothing to the prompt.
+ */
+function voiceGuidance(voice: VoiceProfileData | null): string {
+  if (!voice) {
+    return "";
+  }
+  const summary = voice.summary.trim();
+  const traits = voice.traits.filter((trait) => trait.trim().length > 0);
+  if (summary.length === 0 && traits.length === 0) {
+    return "";
+  }
+  const lines = [
+    "",
+    "Match this author's established writing voice while rewriting:",
+  ];
+  if (summary.length > 0) {
+    lines.push(summary);
+  }
+  if (traits.length > 0) {
+    lines.push(`Traits: ${traits.join("; ")}.`);
+  }
+  return lines.join("\n");
+}
+
 function buildPrompt(
   text: string,
   platforms: string[],
-  capabilities: CapabilityMatrix | null
+  capabilities: CapabilityMatrix | null,
+  voice: VoiceProfileData | null
 ): string {
   const guidance = platforms
     .map((platform) => platformGuidance(platform, capabilities))
@@ -84,6 +116,7 @@ function buildPrompt(
     "",
     "Target platforms:",
     guidance,
+    voiceGuidance(voice),
     "",
     "Respond with ONLY a JSON object, no prose and no code fences, mapping each",
     'platform key to its rewritten body string, e.g. { "x": "...", "linkedin":',
@@ -149,10 +182,19 @@ export async function reformatForPlatforms(
     return { variants: {}, failure: "no-agent" };
   }
 
+  // Fetch the learned voice profile defensively: when present it conditions the
+  // rewrite; when absent (or on any read error) behavior is unchanged.
+  let voice: VoiceProfileData | null = null;
+  try {
+    voice = await getVoiceProfile();
+  } catch (error) {
+    logger.error({ err: error }, "[Reformat] Failed to read voice profile");
+  }
+
   try {
     const raw = await acpPrompt(
       agent,
-      buildPrompt(text, platforms, capabilities)
+      buildPrompt(text, platforms, capabilities, voice)
     );
     const variants = parseAgentResponse(raw, platforms);
     if (!variants) {
