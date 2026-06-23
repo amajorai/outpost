@@ -20,6 +20,7 @@
  * be rejected by the provider — surfaced as a per-target failure in history.
  */
 
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { logger } from "@/lib/logger";
 import type { Platform } from "@/lib/providers/types";
 import {
@@ -28,7 +29,6 @@ import {
 } from "@/lib/repos/scheduled-posts";
 import { listSocialAccounts } from "@/lib/repos/social-accounts";
 import { runSweep } from "@/lib/scheduler/scheduler";
-import { DEFAULT_WORKSPACE_ID } from "@/lib/social-schema";
 import type { DetectedPost } from "./types";
 
 export interface RouteResult {
@@ -79,7 +79,7 @@ async function buildTargets(
 export async function routeDetectedPost(
   detected: DetectedPost,
   targetPlatforms: Platform[],
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<RouteResult> {
   const targets = await buildTargets(detected, targetPlatforms, workspaceId);
   if (targets.length === 0) {

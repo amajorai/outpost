@@ -18,6 +18,7 @@
  */
 
 import { acpPrompt } from "@/lib/acp-client";
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { logger } from "@/lib/logger";
 import { getProviderFor, PLATFORMS, type Platform } from "@/lib/providers";
 import { rankCreatorWinners, slugId } from "@/lib/radar/rank";
@@ -26,7 +27,7 @@ import {
   listRadarTargets,
   upsertTrendSignal,
 } from "@/lib/repos/radar";
-import { DEFAULT_WORKSPACE_ID, type RadarTarget } from "@/lib/social-schema";
+import type { RadarTarget } from "@/lib/social-schema";
 import { useAppSettingsStore } from "@/stores/use-app-settings-store";
 
 /** Strip a leading/trailing markdown code fence the agent may wrap JSON in. */
@@ -213,7 +214,7 @@ async function fetchTopic(target: RadarTarget): Promise<number> {
  * fetch" pragmatically — the UI calls this on demand and on mount.
  */
 export async function refreshRadar(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<RadarRefreshResult> {
   const targets = await listRadarTargets(workspaceId);
   const result: RadarRefreshResult = {

@@ -16,8 +16,9 @@
  * repos.
  */
 
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { getDb } from "@/lib/db";
-import { DEFAULT_WORKSPACE_ID, type Template } from "@/lib/social-schema";
+import type { Template } from "@/lib/social-schema";
 
 /**
  * Current version of the JSON {@link TemplateBody} shape.
@@ -147,7 +148,7 @@ export async function saveTemplate(
   input: SaveTemplateInput
 ): Promise<Template> {
   const db = await getDb();
-  const workspaceId = input.workspaceId ?? DEFAULT_WORKSPACE_ID;
+  const workspaceId = input.workspaceId ?? getCurrentWorkspaceId();
   const body = encodeTemplateBody(input.body);
   const name = input.name.trim();
 
@@ -187,7 +188,7 @@ export async function getTemplate(id: string): Promise<Template | null> {
 
 /** List all templates for a workspace, most recently created first. */
 export async function listTemplates(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<Template[]> {
   const db = await getDb();
   const rows = await db.select<TemplateRow[]>(

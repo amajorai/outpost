@@ -24,6 +24,7 @@ import {
   type PlannedPost,
 } from "@/lib/autopilot/orchestrator";
 import { buildStrategistPlan } from "@/lib/autopilot/strategist";
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { logger } from "@/lib/logger";
 import { listActivityItems } from "@/lib/repos/activity-items";
 import { createPlan, getAction, markActionQueued } from "@/lib/repos/autopilot";
@@ -35,10 +36,7 @@ import {
 } from "@/lib/repos/drafts";
 import { createScheduledPost } from "@/lib/repos/scheduled-posts";
 import { listSocialAccounts } from "@/lib/repos/social-accounts";
-import {
-  type AutopilotAutonomy,
-  DEFAULT_WORKSPACE_ID,
-} from "@/lib/social-schema";
+import type { AutopilotAutonomy } from "@/lib/social-schema";
 import {
   computeTimingSlots,
   nextOccurrence,
@@ -120,7 +118,7 @@ async function findAccountForPlatform(
  */
 export function defaultAutopilotDeps(
   autonomy: AutopilotAutonomy,
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): AutopilotDeps {
   return {
     buildPlan: async () => {

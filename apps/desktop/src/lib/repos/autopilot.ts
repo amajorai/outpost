@@ -13,11 +13,11 @@
  * mapped explicitly here, mirroring the sibling repos.
  */
 
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { getDb } from "@/lib/db";
-import {
-  type AutopilotAction,
-  type AutopilotActionStatus,
-  DEFAULT_WORKSPACE_ID,
+import type {
+  AutopilotAction,
+  AutopilotActionStatus,
 } from "@/lib/social-schema";
 
 /** Row shape as returned by the snake_case `autopilot_actions` table. */
@@ -73,7 +73,7 @@ export interface CreateAutopilotActionInput {
  */
 export async function createPlan(
   actions: CreateAutopilotActionInput[],
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<AutopilotAction[]> {
   if (actions.length === 0) {
     throw new Error("Cannot record an autopilot plan with no actions");
@@ -129,7 +129,7 @@ export async function createPlan(
 
 /** List a workspace's autopilot actions, newest first. */
 export async function listActions(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<AutopilotAction[]> {
   const db = await getDb();
   const rows = await db.select<AutopilotActionRow[]>(

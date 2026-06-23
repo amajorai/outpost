@@ -20,13 +20,13 @@
  * explicitly here, mirroring the sibling repos.
  */
 
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { getDb } from "@/lib/db";
-import {
-  DEFAULT_WORKSPACE_ID,
-  type RadarTarget,
-  type RadarTargetKind,
-  type TrendSignal,
-  type TrendSignalKind,
+import type {
+  RadarTarget,
+  RadarTargetKind,
+  TrendSignal,
+  TrendSignalKind,
 } from "@/lib/social-schema";
 
 /** Row shape as returned by the snake_case `radar_targets` table. */
@@ -119,7 +119,7 @@ export async function addRadarTarget(
   input: AddRadarTargetInput
 ): Promise<RadarTarget> {
   const db = await getDb();
-  const workspaceId = input.workspaceId ?? DEFAULT_WORKSPACE_ID;
+  const workspaceId = input.workspaceId ?? getCurrentWorkspaceId();
   const platform = input.platform ?? NULL_SENTINEL;
   const value = input.value.trim();
   const label = input.label ?? null;
@@ -151,7 +151,7 @@ export async function removeRadarTarget(id: string): Promise<void> {
 
 /** List a workspace's tracked targets, newest first. */
 export async function listRadarTargets(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<RadarTarget[]> {
   const db = await getDb();
   const rows = await db.select<RadarTargetRow[]>(
@@ -187,7 +187,7 @@ export async function upsertTrendSignal(
   input: UpsertTrendSignalInput
 ): Promise<void> {
   const db = await getDb();
-  const workspaceId = input.workspaceId ?? DEFAULT_WORKSPACE_ID;
+  const workspaceId = input.workspaceId ?? getCurrentWorkspaceId();
   const platform = input.platform ?? NULL_SENTINEL;
   const targetId = input.targetId ?? NULL_SENTINEL;
   await db.execute(
@@ -219,7 +219,7 @@ export async function upsertTrendSignal(
 
 /** List a workspace's cached signals, highest score first then newest. */
 export async function listTrendSignals(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<TrendSignal[]> {
   const db = await getDb();
   const rows = await db.select<TrendSignalRow[]>(

@@ -9,6 +9,7 @@ import {
 } from "@repo/ui/sidebar";
 import { Search } from "lucide-react";
 import { NAV_SECTION_META } from "@/components/nav/sections";
+import { WorkspaceSwitcher } from "@/components/nav/workspace-switcher";
 import { useNavigationStore } from "@/stores/use-navigation-store";
 
 const MAC_PLATFORM_REGEX = /Mac/;
@@ -30,6 +31,12 @@ export function AppSidebar({ onOpenCommandMenu }: AppSidebarProps) {
       collapsible="none"
     >
       <SidebarContent className="gap-1 px-2 pt-3">
+        <SidebarGroup className="py-1">
+          <SidebarGroupContent>
+            <WorkspaceSwitcher />
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         <SidebarGroup className="py-1">
           <SidebarGroupContent>
             <button

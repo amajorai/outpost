@@ -14,12 +14,9 @@
  * mirroring the sibling repos.
  */
 
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { getDb } from "@/lib/db";
-import {
-  DEFAULT_WORKSPACE_ID,
-  type InboxItem,
-  type InboxItemKind,
-} from "@/lib/social-schema";
+import type { InboxItem, InboxItemKind } from "@/lib/social-schema";
 
 /** Row shape as returned by the snake_case `inbox_items` table. */
 interface InboxItemRow {
@@ -80,7 +77,7 @@ export async function createInboxItem(
   input: CreateInboxItemInput
 ): Promise<boolean> {
   const db = await getDb();
-  const workspaceId = input.workspaceId ?? DEFAULT_WORKSPACE_ID;
+  const workspaceId = input.workspaceId ?? getCurrentWorkspaceId();
   const result = await db.execute(
     "INSERT OR IGNORE INTO inbox_items (id, workspace_id, social_account_id, platform, kind, author, text, permalink, external_id, received_at, replied) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
     [
@@ -102,7 +99,7 @@ export async function createInboxItem(
 
 /** List all inbox items for a workspace, newest first. */
 export async function listInboxItems(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<InboxItem[]> {
   const db = await getDb();
   const rows = await db.select<InboxItemRow[]>(

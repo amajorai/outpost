@@ -18,6 +18,7 @@
  */
 
 import { acpPrompt } from "@/lib/acp-client";
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { getDb } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { decodeDraftBody, listDrafts } from "@/lib/repos/drafts";
@@ -26,7 +27,6 @@ import {
   VOICE_PROFILE_SCHEMA_VERSION,
   type VoiceProfileData,
 } from "@/lib/repos/voice-profile";
-import { DEFAULT_WORKSPACE_ID } from "@/lib/social-schema";
 import { useAppSettingsStore } from "@/stores/use-app-settings-store";
 
 /** Strip a leading/trailing markdown code fence the agent may wrap JSON in. */
@@ -147,7 +147,7 @@ function parseAgentResponse(
  * profile is left untouched.
  */
 export async function deriveVoiceProfile(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<VoiceDeriveResult> {
   const { acpAgents, acpTextGenAgentId } = useAppSettingsStore.getState();
   const agent = acpTextGenAgentId

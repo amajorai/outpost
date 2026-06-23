@@ -22,6 +22,7 @@
  */
 
 import { acpPrompt } from "@/lib/acp-client";
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { logger } from "@/lib/logger";
 import { getRadarResearchInput } from "@/lib/radar/signal";
 import { listActivityItems } from "@/lib/repos/activity-items";
@@ -34,7 +35,7 @@ import {
   getVoiceProfile,
   type VoiceProfileData,
 } from "@/lib/repos/voice-profile";
-import { type ActivityItem, DEFAULT_WORKSPACE_ID } from "@/lib/social-schema";
+import type { ActivityItem } from "@/lib/social-schema";
 import { useAppSettingsStore } from "@/stores/use-app-settings-store";
 
 /** Strip a leading/trailing markdown code fence the agent may wrap JSON in. */
@@ -227,7 +228,7 @@ function parseAgentResponse(raw: string): StrategistPost[] {
  * was produced (the orchestrator then records nothing and reports it).
  */
 export async function buildStrategistPlan(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<StrategistResult> {
   const { acpAgents, acpTextGenAgentId } = useAppSettingsStore.getState();
   const agent = acpTextGenAgentId

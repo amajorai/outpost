@@ -18,6 +18,7 @@ import type {
   AutoresearchProposalData,
 } from "@/lib/autoresearch/loop";
 import { proposeChange } from "@/lib/autoresearch/propose";
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { defaultExperimentDeps } from "@/lib/experiments/deps";
 import { evaluateExperiment, startExperiment } from "@/lib/experiments/engine";
 import {
@@ -34,10 +35,7 @@ import {
   listExperimentResults,
   listExperimentVariants,
 } from "@/lib/repos/experiments";
-import {
-  type AutoresearchStrategy,
-  DEFAULT_WORKSPACE_ID,
-} from "@/lib/social-schema";
+import type { AutoresearchStrategy } from "@/lib/social-schema";
 
 /**
  * Create + start the U25 experiment that scores a proposal. The proposal is the
@@ -106,7 +104,7 @@ async function scoreExperiment(experimentId: string): Promise<number> {
  * + window for this run.
  */
 export function defaultAutoresearchDeps(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): AutoresearchLoopDeps {
   return {
     propose: async () => {

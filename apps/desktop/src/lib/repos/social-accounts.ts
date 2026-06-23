@@ -12,8 +12,9 @@
  * `SELECT *` row, mirroring `lib/scheduler/scheduler.ts`.
  */
 
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { getDb } from "@/lib/db";
-import { DEFAULT_WORKSPACE_ID, type SocialAccount } from "@/lib/social-schema";
+import type { SocialAccount } from "@/lib/social-schema";
 
 /** Row shape as returned by the snake_case `social_accounts` table. */
 interface SocialAccountRow {
@@ -70,7 +71,7 @@ export async function createSocialAccount(
   input: CreateSocialAccountInput
 ): Promise<SocialAccount> {
   const db = await getDb();
-  const workspaceId = input.workspaceId ?? DEFAULT_WORKSPACE_ID;
+  const workspaceId = input.workspaceId ?? getCurrentWorkspaceId();
   const externalId = input.externalId ?? null;
   const connected = (input.connected ?? true) ? 1 : 0;
   const createdAt = Date.now();
@@ -101,7 +102,7 @@ export async function createSocialAccount(
 
 /** List all accounts for a workspace, newest first. */
 export async function listSocialAccounts(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<SocialAccount[]> {
   const db = await getDb();
   const rows = await db.select<SocialAccountRow[]>(

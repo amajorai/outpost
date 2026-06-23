@@ -11,12 +11,9 @@
  * mirroring `lib/repos/social-accounts.ts`.
  */
 
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { getDb } from "@/lib/db";
-import {
-  DEFAULT_WORKSPACE_ID,
-  type MediaAsset,
-  type MediaAssetKind,
-} from "@/lib/social-schema";
+import type { MediaAsset, MediaAssetKind } from "@/lib/social-schema";
 
 /** Row shape as returned by the snake_case `media_assets` table. */
 interface MediaAssetRow {
@@ -76,7 +73,7 @@ export async function createMediaAsset(
   input: CreateMediaAssetInput
 ): Promise<MediaAsset> {
   const db = await getDb();
-  const workspaceId = input.workspaceId ?? DEFAULT_WORKSPACE_ID;
+  const workspaceId = input.workspaceId ?? getCurrentWorkspaceId();
   const mimeType = input.mimeType ?? null;
 
   const existing = await db.select<MediaAssetRow[]>(
@@ -108,7 +105,7 @@ export async function createMediaAsset(
 
 /** List all media assets for a workspace, newest first. */
 export async function listMediaAssets(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<MediaAsset[]> {
   const db = await getDb();
   const rows = await db.select<MediaAssetRow[]>(

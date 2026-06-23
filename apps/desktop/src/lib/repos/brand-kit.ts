@@ -12,15 +12,15 @@
  * map explicitly, mirroring `lib/repos/social-accounts.ts`.
  */
 
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { getDb } from "@/lib/db";
-import {
-  type BrandColor,
-  type BrandFont,
-  type BrandKit,
-  type BrandLogo,
-  type BrandWatermark,
-  DEFAULT_WORKSPACE_ID,
-  type WatermarkPosition,
+import type {
+  BrandColor,
+  BrandFont,
+  BrandKit,
+  BrandLogo,
+  BrandWatermark,
+  WatermarkPosition,
 } from "@/lib/social-schema";
 
 /** Row shape as returned by the snake_case `brand_kit` table. */
@@ -141,7 +141,7 @@ function mapRow(row: BrandKitRow): BrandKit {
 
 /** An empty, never-saved brand kit for a workspace that has no row yet. */
 export function emptyBrandKit(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): BrandKit {
   const now = Date.now();
   return {
@@ -161,7 +161,7 @@ export function emptyBrandKit(
  * Never returns null so callers can render the editor unconditionally.
  */
 export async function getBrandKit(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<BrandKit> {
   const db = await getDb();
   const rows = await db.select<BrandKitRow[]>(
@@ -190,7 +190,7 @@ export async function saveBrandKit(
   input: SaveBrandKitInput
 ): Promise<BrandKit> {
   const db = await getDb();
-  const workspaceId = input.workspaceId ?? DEFAULT_WORKSPACE_ID;
+  const workspaceId = input.workspaceId ?? getCurrentWorkspaceId();
   const now = Date.now();
   const logos = JSON.stringify(input.logos);
   const colors = JSON.stringify(input.colors);

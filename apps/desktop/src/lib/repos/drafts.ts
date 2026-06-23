@@ -13,8 +13,9 @@
  */
 
 import type { MediaAttachment } from "@/lib/compose/platform-limits";
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { getDb } from "@/lib/db";
-import { DEFAULT_WORKSPACE_ID, type Draft } from "@/lib/social-schema";
+import type { Draft } from "@/lib/social-schema";
 
 /**
  * Current version of the JSON {@link DraftBody} shape.
@@ -208,7 +209,7 @@ export interface SaveDraftInput {
  */
 export async function saveDraft(input: SaveDraftInput): Promise<Draft> {
   const db = await getDb();
-  const workspaceId = input.workspaceId ?? DEFAULT_WORKSPACE_ID;
+  const workspaceId = input.workspaceId ?? getCurrentWorkspaceId();
   const body = encodeDraftBody(input.body);
   const now = Date.now();
 
@@ -254,7 +255,7 @@ export async function getDraft(id: string): Promise<Draft | null> {
 
 /** List all drafts for a workspace, most recently updated first. */
 export async function listDrafts(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<Draft[]> {
   const db = await getDb();
   const rows = await db.select<DraftRow[]>(

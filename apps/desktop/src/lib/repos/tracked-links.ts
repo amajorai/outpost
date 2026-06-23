@@ -13,12 +13,9 @@
  * mirroring the sibling repos. Queries are scoped by `workspace_id`.
  */
 
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { getDb } from "@/lib/db";
-import {
-  DEFAULT_WORKSPACE_ID,
-  type TrackedLink,
-  type UtmParams,
-} from "@/lib/social-schema";
+import type { TrackedLink, UtmParams } from "@/lib/social-schema";
 
 /** Row shape as returned by the snake_case `tracked_links` table. */
 interface TrackedLinkRow {
@@ -139,7 +136,7 @@ export async function createTrackedLink(
   input: CreateTrackedLinkInput
 ): Promise<TrackedLink> {
   const db = await getDb();
-  const workspaceId = input.workspaceId ?? DEFAULT_WORKSPACE_ID;
+  const workspaceId = input.workspaceId ?? getCurrentWorkspaceId();
   const id = crypto.randomUUID();
   const createdAt = Date.now();
   const utm: UtmParams = { ...EMPTY_UTM, ...input.utm };
@@ -185,7 +182,7 @@ export async function createTrackedLink(
 
 /** List a workspace's tracked links, newest first. */
 export async function listTrackedLinks(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<TrackedLink[]> {
   const db = await getDb();
   const rows = await db.select<TrackedLinkRow[]>(

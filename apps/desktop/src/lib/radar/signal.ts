@@ -13,17 +13,17 @@
  * prompt — the "absence is the old default" contract.
  */
 
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { logger } from "@/lib/logger";
 import { formatRadarResearchInput } from "@/lib/radar/rank";
 import { listTrendSignals } from "@/lib/repos/radar";
-import { DEFAULT_WORKSPACE_ID } from "@/lib/social-schema";
 
 /**
  * The radar's cached findings formatted as autoresearch research input, or "" if
  * there is nothing to surface. Never throws.
  */
 export async function getRadarResearchInput(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<string> {
   try {
     const signals = await listTrendSignals(workspaceId);

@@ -16,14 +16,14 @@
  * explicitly rather than casting a `SELECT *` row, mirroring the sibling repos.
  */
 
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { getDb } from "@/lib/db";
-import {
-  DEFAULT_WORKSPACE_ID,
-  type Experiment,
-  type ExperimentGoalMetric,
-  type ExperimentResult,
-  type ExperimentStatus,
-  type ExperimentVariant,
+import type {
+  Experiment,
+  ExperimentGoalMetric,
+  ExperimentResult,
+  ExperimentStatus,
+  ExperimentVariant,
 } from "@/lib/social-schema";
 
 /** Row shape as returned by the snake_case `experiments` table. */
@@ -143,7 +143,7 @@ export async function createExperiment(
   }
 
   const db = await getDb();
-  const workspaceId = input.workspaceId ?? DEFAULT_WORKSPACE_ID;
+  const workspaceId = input.workspaceId ?? getCurrentWorkspaceId();
   const createdAt = Date.now();
   const experimentId = crypto.randomUUID();
   const status: ExperimentStatus = "draft";
@@ -208,7 +208,7 @@ export async function createExperiment(
 
 /** List experiments for a workspace, newest first. */
 export async function listExperiments(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<Experiment[]> {
   const db = await getDb();
   const rows = await db.select<ExperimentRow[]>(
@@ -260,7 +260,7 @@ export interface ExperimentWinner {
  * already won. Scoped through the parent experiment's workspace.
  */
 export async function listExperimentWinners(
-  workspaceId: string = DEFAULT_WORKSPACE_ID,
+  workspaceId: string = getCurrentWorkspaceId(),
   limit = 5
 ): Promise<ExperimentWinner[]> {
   const db = await getDb();

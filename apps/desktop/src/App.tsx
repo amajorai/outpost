@@ -14,6 +14,7 @@ import { initPostHog } from "@/lib/posthog";
 import { useAppSettingsStore } from "@/stores/use-app-settings-store";
 import { useLicenseStore } from "@/stores/use-license-store";
 import { useNavigationStore } from "@/stores/use-navigation-store";
+import { useWorkspaceStore } from "@/stores/use-workspace-store";
 
 function UpdateChecker() {
   useAppUpdater();
@@ -61,11 +62,17 @@ export default function App() {
   const loadNavigation = useNavigationStore((s) => s.loadNavigation);
   const navInitialLoadDone = useNavigationStore((s) => s.isInitialLoadDone);
 
+  const loadWorkspaces = useWorkspaceStore((s) => s.loadWorkspaces);
+  const workspaceInitialLoadDone = useWorkspaceStore(
+    (s) => s.isInitialLoadDone
+  );
+
   useEffect(() => {
     loadStoredLicense();
     loadSettings();
     loadNavigation();
-  }, [loadStoredLicense, loadSettings, loadNavigation]);
+    loadWorkspaces();
+  }, [loadStoredLicense, loadSettings, loadNavigation, loadWorkspaces]);
 
   useEffect(() => {
     if (!isInitialLoadDone) {
@@ -76,7 +83,7 @@ export default function App() {
   }, [isInitialLoadDone, analyticsEnabled, loggingEnabled]);
 
   const showInitialLoading =
-    !(isInitialLoadDone && navInitialLoadDone) ||
+    !(isInitialLoadDone && navInitialLoadDone && workspaceInitialLoadDone) ||
     (isValidating && !isValidated);
   if (showInitialLoading && !hasPassedInitialLoadRef.current) {
     return (

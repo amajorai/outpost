@@ -18,6 +18,7 @@
 
 import { acpPrompt } from "@/lib/acp-client";
 import type { AutoresearchProposalData } from "@/lib/autoresearch/loop";
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { logger } from "@/lib/logger";
 import { getRadarResearchInput } from "@/lib/radar/signal";
 import { listActivityItems } from "@/lib/repos/activity-items";
@@ -30,11 +31,10 @@ import {
   getVoiceProfile,
   type VoiceProfileData,
 } from "@/lib/repos/voice-profile";
-import {
-  type ActivityItem,
-  type AutoresearchStrategy,
-  DEFAULT_WORKSPACE_ID,
-  type ExperimentGoalMetric,
+import type {
+  ActivityItem,
+  AutoresearchStrategy,
+  ExperimentGoalMetric,
 } from "@/lib/social-schema";
 import { useAppSettingsStore } from "@/stores/use-app-settings-store";
 
@@ -228,7 +228,7 @@ function parseAgentResponse(raw: string): AutoresearchProposalData | null {
  */
 export async function proposeChange(
   strategy: AutoresearchStrategy,
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<ProposeResult> {
   const { acpAgents, acpTextGenAgentId } = useAppSettingsStore.getState();
   const agent = acpTextGenAgentId

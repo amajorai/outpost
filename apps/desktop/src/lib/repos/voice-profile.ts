@@ -12,8 +12,9 @@
  * We map explicitly, mirroring `lib/repos/brand-kit.ts`.
  */
 
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { getDb } from "@/lib/db";
-import { DEFAULT_WORKSPACE_ID, type VoiceProfile } from "@/lib/social-schema";
+import type { VoiceProfile } from "@/lib/social-schema";
 
 /**
  * Current version of the JSON {@link VoiceProfileData} shape.
@@ -125,7 +126,7 @@ const SELECT_COLUMNS = "id, workspace_id, profile, created_at, updated_at";
  * old default (the Data Versioning Contract: absent must not change behavior).
  */
 export async function getVoiceProfile(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<VoiceProfileData | null> {
   const db = await getDb();
   const rows = await db.select<VoiceProfileRow[]>(
@@ -147,7 +148,7 @@ export async function getVoiceProfile(
  */
 export async function saveVoiceProfile(
   data: VoiceProfileData,
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<VoiceProfile> {
   const db = await getDb();
   const now = Date.now();
@@ -183,7 +184,7 @@ export async function saveVoiceProfile(
 
 /** Delete the workspace's voice profile. Returns true when a row was removed. */
 export async function deleteVoiceProfile(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<boolean> {
   const db = await getDb();
   const result = await db.execute(

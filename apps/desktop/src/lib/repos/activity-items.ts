@@ -16,8 +16,9 @@
  * `SELECT *` row, mirroring the sibling repos.
  */
 
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { getDb } from "@/lib/db";
-import { type ActivityItem, DEFAULT_WORKSPACE_ID } from "@/lib/social-schema";
+import type { ActivityItem } from "@/lib/social-schema";
 
 /** Row shape as returned by the snake_case `activity_items` table. */
 interface ActivityItemRow {
@@ -89,7 +90,7 @@ export async function upsertActivityItem(
   input: UpsertActivityItemInput
 ): Promise<void> {
   const db = await getDb();
-  const workspaceId = input.workspaceId ?? DEFAULT_WORKSPACE_ID;
+  const workspaceId = input.workspaceId ?? getCurrentWorkspaceId();
   await db.execute(
     `INSERT INTO activity_items (id, workspace_id, social_account_id, platform, post_remote_id, permalink, text, likes, comments, shares, views, engagement_fetched_at, published_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
@@ -123,7 +124,7 @@ export async function upsertActivityItem(
 
 /** List all activity items for a workspace, newest published first. */
 export async function listActivityItems(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<ActivityItem[]> {
   const db = await getDb();
   const rows = await db.select<ActivityItemRow[]>(

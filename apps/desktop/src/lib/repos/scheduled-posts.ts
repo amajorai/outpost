@@ -17,12 +17,12 @@
  * explicitly rather than casting a `SELECT *` row, mirroring the sibling repos.
  */
 
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { getDb } from "@/lib/db";
-import {
-  DEFAULT_WORKSPACE_ID,
-  type PostTarget,
-  type ScheduledPost,
-  type ScheduledPostStatus,
+import type {
+  PostTarget,
+  ScheduledPost,
+  ScheduledPostStatus,
 } from "@/lib/social-schema";
 
 /** A single account a scheduled post is fanned out to. */
@@ -113,7 +113,7 @@ export async function createScheduledPost(
   }
 
   const db = await getDb();
-  const workspaceId = input.workspaceId ?? DEFAULT_WORKSPACE_ID;
+  const workspaceId = input.workspaceId ?? getCurrentWorkspaceId();
   const draftId = input.draftId ?? null;
   const createdAt = Date.now();
   const postId = crypto.randomUUID();
@@ -170,7 +170,7 @@ export async function createScheduledPost(
 
 /** List scheduled posts for a workspace, soonest first. */
 export async function listScheduledPosts(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<ScheduledPost[]> {
   const db = await getDb();
   const rows = await db.select<ScheduledPostRow[]>(

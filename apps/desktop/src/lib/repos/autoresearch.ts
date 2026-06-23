@@ -13,13 +13,13 @@
  * the sibling repos.
  */
 
+import { getCurrentWorkspaceId } from "@/lib/current-workspace";
 import { getDb } from "@/lib/db";
-import {
-  type AutoresearchDecision,
-  type AutoresearchIteration,
-  type AutoresearchStrategy,
-  DEFAULT_WORKSPACE_ID,
-  type ExperimentGoalMetric,
+import type {
+  AutoresearchDecision,
+  AutoresearchIteration,
+  AutoresearchStrategy,
+  ExperimentGoalMetric,
 } from "@/lib/social-schema";
 
 /** Row shape as returned by the snake_case `autoresearch_strategy` table. */
@@ -102,7 +102,7 @@ function mapIterationRow(row: AutoresearchIterationRow): AutoresearchIteration {
  * the user saves, so a fresh workspace shows the starter doc.
  */
 export async function getStrategy(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<AutoresearchStrategy> {
   const db = await getDb();
   const rows = await db.select<AutoresearchStrategyRow[]>(
@@ -138,7 +138,7 @@ export async function saveStrategy(
   input: SaveStrategyInput
 ): Promise<AutoresearchStrategy> {
   const db = await getDb();
-  const workspaceId = input.workspaceId ?? DEFAULT_WORKSPACE_ID;
+  const workspaceId = input.workspaceId ?? getCurrentWorkspaceId();
   const updatedAt = Date.now();
   await db.execute(
     `INSERT INTO autoresearch_strategy (workspace_id, content, goal_metric, observation_window_hours, updated_at)
@@ -167,7 +167,7 @@ export async function saveStrategy(
 
 /** List a workspace's iterations, newest first. */
 export async function listIterations(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<AutoresearchIteration[]> {
   const db = await getDb();
   const rows = await db.select<AutoresearchIterationRow[]>(
@@ -179,7 +179,7 @@ export async function listIterations(
 
 /** The highest iteration number recorded for a workspace, or 0 when none. */
 export async function getMaxIterationNumber(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<number> {
   const db = await getDb();
   const rows = await db.select<{ max_number: number | null }[]>(
@@ -195,7 +195,7 @@ export async function getMaxIterationNumber(
  * iteration always keeps, establishing the baseline).
  */
 export async function getBestKeptMetric(
-  workspaceId: string = DEFAULT_WORKSPACE_ID
+  workspaceId: string = getCurrentWorkspaceId()
 ): Promise<number | null> {
   const db = await getDb();
   const rows = await db.select<{ best: number | null }[]>(
@@ -223,7 +223,7 @@ export async function createIteration(
   input: CreateIterationInput
 ): Promise<AutoresearchIteration> {
   const db = await getDb();
-  const workspaceId = input.workspaceId ?? DEFAULT_WORKSPACE_ID;
+  const workspaceId = input.workspaceId ?? getCurrentWorkspaceId();
   const id = crypto.randomUUID();
   const createdAt = Date.now();
   const decision: AutoresearchDecision = "pending";
