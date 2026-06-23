@@ -200,6 +200,7 @@ export const useAppSettingsStore = create<AppSettingsState>()((set, _get) => ({
     try {
       const store = await load(SETTINGS_STORE_NAME, {
         autoSave: true,
+        defaults: {},
       });
       await store.set(SEASONAL_EFFECTS_ENABLED_FIELD, enabled);
       await store.save();
@@ -216,6 +217,7 @@ export const useAppSettingsStore = create<AppSettingsState>()((set, _get) => ({
     try {
       const store = await load(SETTINGS_STORE_NAME, {
         autoSave: true,
+        defaults: {},
       });
       await store.set(THEME_FIELD, theme);
       await store.save();
