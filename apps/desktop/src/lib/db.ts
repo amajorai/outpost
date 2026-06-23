@@ -6,7 +6,7 @@ let db: Database | null = null;
 let dbInitPromise: Promise<Database> | null = null;
 
 // Bump this whenever you add a new migration below.
-const TARGET_SCHEMA_VERSION = 11;
+const TARGET_SCHEMA_VERSION = 12;
 
 /**
  * Pre-v10 domain tables that gain a `workspace_id` in the v10 migration.
@@ -343,6 +343,58 @@ const migrations: Record<number, MigrationFn> = {
     `);
     await database.execute(
       "CREATE INDEX IF NOT EXISTS idx_brand_kit_workspace ON brand_kit(workspace_id)"
+    );
+  },
+  12: async (database) => {
+    // Monitoring schema (U20). Both tables are workspace-scoped.
+    //
+    // inbox_items is the unified engagement inbox: comments, replies, mentions,
+    // and DMs read from across connected accounts and persisted so the inbox is
+    // stable across refreshes. The UNIQUE index on
+    // (workspace_id, social_account_id, external_id) is what makes re-reading
+    // the inbox idempotent — repeated fetches `INSERT OR IGNORE` and never
+    // accumulate duplicates of the same remote item.
+    //
+    // activity_items is the post-performance feed consumed by U21 (this unit
+    // only creates the table + TS type; no repo or UI reads it yet).
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS inbox_items (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        social_account_id TEXT NOT NULL,
+        platform TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        author TEXT NOT NULL,
+        text TEXT NOT NULL,
+        permalink TEXT,
+        external_id TEXT NOT NULL,
+        received_at INTEGER NOT NULL,
+        replied INTEGER NOT NULL DEFAULT 0
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_inbox_items_workspace ON inbox_items(workspace_id, received_at)"
+    );
+    await database.execute(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_inbox_items_external ON inbox_items(workspace_id, social_account_id, external_id)"
+    );
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS activity_items (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        social_account_id TEXT NOT NULL,
+        platform TEXT NOT NULL,
+        post_remote_id TEXT NOT NULL,
+        permalink TEXT,
+        text TEXT,
+        likes INTEGER NOT NULL DEFAULT 0,
+        comments INTEGER NOT NULL DEFAULT 0,
+        views INTEGER NOT NULL DEFAULT 0,
+        published_at INTEGER
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_activity_items_workspace ON activity_items(workspace_id, published_at)"
     );
   },
 };

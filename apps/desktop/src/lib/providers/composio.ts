@@ -21,6 +21,8 @@ import {
   type PlatformCapabilities,
   type PlatformProvider,
   type ProviderAccount,
+  type ProviderInboxItem,
+  type ProviderInboxKind,
   type PublishResult,
   type PublishTarget,
   type RemotePostRef,
@@ -299,6 +301,138 @@ export class ComposioProvider implements PlatformProvider {
         `[Composio] capabilities lookup failed for ${platform}`
       );
       return emptyCapabilities();
+    }
+  }
+
+  /**
+   * Read the engagement inbox (comments/replies/mentions, plus DMs where the
+   * toolkit supports them) for one account by executing the toolkit's
+   * "list comments" / "list mentions" / "list messages" tools.
+   *
+   * TODO(composio-live): the exact tool slugs and response shapes differ per
+   * toolkit and must be confirmed against the live `/tools` catalog. The mapping
+   * below assumes a `data.items[]` envelope with id/author/text/created_at/url
+   * fields; adjust field names once a real key is available.
+   */
+  async readInbox(account: ProviderAccount): Promise<ProviderInboxItem[]> {
+    const toolkit = TOOLKIT_BY_PLATFORM[account.platform];
+    const caps = await this.capabilities(account.platform);
+    const tools: { slug: string; kind: ProviderInboxKind }[] = [];
+    if (caps.readComments) {
+      tools.push(
+        { slug: `${toolkit.toUpperCase()}_LIST_COMMENTS`, kind: "comment" },
+        { slug: `${toolkit.toUpperCase()}_LIST_MENTIONS`, kind: "mention" }
+      );
+    }
+    if (caps.readDMs) {
+      tools.push({
+        slug: `${toolkit.toUpperCase()}_LIST_MESSAGES`,
+        kind: "dm",
+      });
+    }
+    if (tools.length === 0) {
+      return [];
+    }
+
+    const items: ProviderInboxItem[] = [];
+    for (const tool of tools) {
+      try {
+        const result = await this.request<{
+          data?: {
+            items?: {
+              id?: string;
+              author?: string;
+              username?: string;
+              text?: string;
+              body?: string;
+              url?: string;
+              permalink?: string;
+              created_at?: number | string;
+            }[];
+          };
+        }>({
+          method: "POST",
+          path: "/tools/execute",
+          body: {
+            toolSlug: tool.slug,
+            connectedAccountId: account.externalId,
+            arguments: {},
+          },
+        });
+
+        for (const raw of result.data?.items ?? []) {
+          if (!raw.id) {
+            continue;
+          }
+          items.push({
+            externalId: raw.id,
+            platform: account.platform,
+            kind: tool.kind,
+            author: raw.author ?? raw.username ?? "unknown",
+            text: raw.text ?? raw.body ?? "",
+            permalink: raw.url ?? raw.permalink,
+            receivedAt:
+              typeof raw.created_at === "number"
+                ? raw.created_at
+                : Date.parse(String(raw.created_at ?? "")) || Date.now(),
+          });
+        }
+      } catch (error) {
+        logger.error(
+          { err: error },
+          `[Composio] readInbox tool ${tool.slug} failed`
+        );
+      }
+    }
+    return items;
+  }
+
+  /**
+   * Reply to an inbox item by executing the toolkit's reply / send-message tool.
+   *
+   * TODO(composio-live): the reply tool slug and its argument schema (whether it
+   * takes the parent comment id vs a conversation id for DMs) must be confirmed
+   * against the live catalog.
+   */
+  async replyToInboxItem(
+    item: ProviderInboxItem,
+    text: string
+  ): Promise<PublishResult> {
+    const toolkit = TOOLKIT_BY_PLATFORM[item.platform];
+    const slug =
+      item.kind === "dm"
+        ? `${toolkit.toUpperCase()}_SEND_MESSAGE`
+        : `${toolkit.toUpperCase()}_REPLY_TO_COMMENT`;
+    try {
+      const result = await this.request<{
+        successful?: boolean;
+        error?: string | null;
+        data?: { id?: string; url?: string; permalink?: string };
+      }>({
+        method: "POST",
+        path: "/tools/execute",
+        body: {
+          toolSlug: slug,
+          arguments: { parentId: item.externalId, text },
+        },
+      });
+
+      if (result.successful === false || result.error) {
+        return { ok: false, error: result.error ?? "Composio reply failed" };
+      }
+      const remoteId = result.data?.id;
+      if (!remoteId) {
+        return { ok: false, error: "Composio reply returned no id" };
+      }
+      return {
+        ok: true,
+        remoteId,
+        remoteUrl: result.data?.url ?? result.data?.permalink,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ err: error }, "[Composio] replyToInboxItem failed");
+      return { ok: false, error: message };
     }
   }
 }

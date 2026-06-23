@@ -127,6 +127,29 @@ export type PublishResult =
   | { ok: true; remoteId: string; remoteUrl?: string }
   | { ok: false; error: string };
 
+/** The kind of an inbox item a provider can surface. */
+export type ProviderInboxKind = "comment" | "reply" | "mention" | "dm";
+
+/**
+ * One engagement item as a provider surfaces it (U20). This is a thin DTO, not
+ * the persisted `InboxItem` row — like `ProviderAccount`, it carries only what
+ * the provider knows. The inbox layer maps it onto an `InboxItem` and persists
+ * it, deduping on `externalId`.
+ */
+export interface ProviderInboxItem {
+  /** The item's id as known to the remote platform — the dedupe key. */
+  externalId: string;
+  platform: Platform;
+  kind: ProviderInboxKind;
+  /** Display name / handle of whoever authored the item. */
+  author: string;
+  text: string;
+  /** Canonical URL of the item on the remote platform, when known. */
+  permalink?: string;
+  /** Unix epoch millis the item was created on the remote platform. */
+  receivedAt: number;
+}
+
 /** Engagement counts for a single post. All fields optional/unknown-safe. */
 export interface EngagementCounts {
   likes?: number;
@@ -167,6 +190,25 @@ export interface PlatformProvider {
    * cheap/cacheable; the registry layer caches across calls.
    */
   capabilities(platform: Platform): Promise<PlatformCapabilities>;
+
+  /**
+   * Read engagement items (comments, replies, mentions, and DMs where
+   * supported) for one connected account. Optional: providers that can't read
+   * an inbox omit it, and the inbox layer treats a missing method as "returns
+   * nothing", degrading cleanly. Implementations should only surface DMs where
+   * the platform's `readDMs` capability is true.
+   */
+  readInbox?(account: ProviderAccount): Promise<ProviderInboxItem[]>;
+
+  /**
+   * Reply to a previously-read inbox item. Optional, for the same reason as
+   * `readInbox`. Returns a `PublishResult` (the reply is itself a published
+   * post/comment/DM), so callers branch on `ok` without try/catch.
+   */
+  replyToInboxItem?(
+    item: ProviderInboxItem,
+    text: string
+  ): Promise<PublishResult>;
 }
 
 /** A capability matrix where every platform is unsupported. */

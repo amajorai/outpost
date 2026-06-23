@@ -202,3 +202,59 @@ export interface BrandKit {
   createdAt: number;
   updatedAt: number;
 }
+
+/** The kind of an inbox item: a comment/reply/mention or a direct message. */
+export type InboxItemKind = "comment" | "reply" | "mention" | "dm";
+
+/**
+ * A unified engagement inbox item (U20): one comment, reply, mention, or DM
+ * read from a connected account and persisted so the inbox is stable across
+ * refreshes. The matching DDL lives in the v11 -> v12 migration in `lib/db.ts`.
+ *
+ * `externalId` is the remote platform's id for the item; together with
+ * `workspaceId` + `socialAccountId` it forms the dedupe key (a UNIQUE index) so
+ * re-reading the inbox never duplicates a previously-seen item.
+ */
+export interface InboxItem {
+  id: string;
+  workspaceId: string;
+  /** The `social_accounts.id` this item was read from. */
+  socialAccountId: string;
+  /** Platform key, e.g. "x", "instagram", "youtube", "linkedin". */
+  platform: string;
+  kind: InboxItemKind;
+  /** Display name / handle of whoever authored the item. */
+  author: string;
+  text: string;
+  /** Canonical URL of the item on the remote platform, when known. */
+  permalink: string | null;
+  /** The item's id as known to the remote platform. */
+  externalId: string;
+  /** Unix epoch millis the item was created on the remote platform. */
+  receivedAt: number;
+  /** 1 once the user has replied to this item from Outpost, else 0. */
+  replied: number;
+}
+
+/**
+ * A post-performance feed item (U20 creates the table + type; U21 consumes it).
+ *
+ * One row per published post the app is tracking, holding its latest engagement
+ * counts. No repo or UI reads this in U20 — it exists so the v11 -> v12
+ * migration ships the schema U21 will build on. The matching DDL lives in the
+ * v11 -> v12 migration in `lib/db.ts`.
+ */
+export interface ActivityItem {
+  id: string;
+  workspaceId: string;
+  socialAccountId: string;
+  platform: string;
+  /** The post's id as known to the remote platform. */
+  postRemoteId: string;
+  permalink: string | null;
+  text: string | null;
+  likes: number;
+  comments: number;
+  views: number;
+  publishedAt: number | null;
+}

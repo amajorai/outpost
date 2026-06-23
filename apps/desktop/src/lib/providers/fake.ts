@@ -19,6 +19,7 @@ import {
   type PlatformCapabilities,
   type PlatformProvider,
   type ProviderAccount,
+  type ProviderInboxItem,
   type PublishResult,
   type PublishTarget,
   type RemotePostRef,
@@ -62,13 +63,21 @@ function hashString(input: string): number {
   return hash;
 }
 
-/** The baseline capabilities a typical platform supports in the fake. */
-function defaultCapabilities(): PlatformCapabilities {
+/** Platforms the fake models as having a DM surface (mirrors X / Instagram). */
+const FAKE_DM_PLATFORMS: ReadonlySet<Platform> = new Set(["x", "instagram"]);
+
+/**
+ * The baseline capabilities a typical platform supports in the fake. Comments
+ * and engagement are universal; DMs are modeled only for `x` and `instagram`
+ * so the inbox's "DMs on X/IG" path is exercised while others degrade cleanly.
+ */
+function defaultCapabilities(platform: Platform): PlatformCapabilities {
+  const hasDMs = FAKE_DM_PLATFORMS.has(platform);
   return {
     publish: true,
     readComments: true,
-    readDMs: false,
-    sendDM: false,
+    readDMs: hasDMs,
+    sendDM: hasDMs,
     readEngagement: true,
     schedule: false,
   };
@@ -174,5 +183,94 @@ export class FakePlatformProvider implements PlatformProvider {
 
   capabilities(platform: Platform): Promise<PlatformCapabilities> {
     return Promise.resolve(this.matrix[platform]);
+  }
+
+  /**
+   * Deterministically synthesize an inbox for one account: a comment, a reply,
+   * and a mention always, plus a DM only when the platform's `readDMs`
+   * capability is true (so the matrix gating is observable). Items are seeded
+   * from the account id so repeated reads return the same `externalId`s — which
+   * lets the persistence layer's dedupe be verified.
+   */
+  readInbox(account: ProviderAccount): Promise<ProviderInboxItem[]> {
+    const caps = this.matrix[account.platform];
+    if (!caps?.readComments) {
+      return Promise.resolve([]);
+    }
+    const seed = hashString(`inbox:${account.platform}:${account.id}`);
+    const base: ProviderInboxItem[] = [
+      {
+        externalId: `fake_${account.id}_comment`,
+        platform: account.platform,
+        kind: "comment",
+        author: `commenter_${seed % 97}`,
+        text: "Love this — how did you make it?",
+        permalink: `https://fake.local/${account.platform}/comment/${seed % 1000}`,
+        receivedAt: this.now() - (seed % 7) * 3_600_000,
+      },
+      {
+        externalId: `fake_${account.id}_reply`,
+        platform: account.platform,
+        kind: "reply",
+        author: `replier_${seed % 53}`,
+        text: "Replying to your thread: totally agree.",
+        permalink: `https://fake.local/${account.platform}/reply/${seed % 1000}`,
+        receivedAt: this.now() - (seed % 11) * 3_600_000,
+      },
+      {
+        externalId: `fake_${account.id}_mention`,
+        platform: account.platform,
+        kind: "mention",
+        author: `mentioner_${seed % 31}`,
+        text: `Great point from @${account.label ?? "you"} on this.`,
+        permalink: `https://fake.local/${account.platform}/mention/${seed % 1000}`,
+        receivedAt: this.now() - (seed % 5) * 3_600_000,
+      },
+    ];
+    if (caps.readDMs) {
+      base.push({
+        externalId: `fake_${account.id}_dm`,
+        platform: account.platform,
+        kind: "dm",
+        author: `dm_sender_${seed % 17}`,
+        text: "Hey! Sliding into your DMs about a collab.",
+        receivedAt: this.now() - (seed % 3) * 3_600_000,
+      });
+    }
+    return Promise.resolve(base);
+  }
+
+  /**
+   * "Reply" to an inbox item. A DM reply requires `sendDM`; comment/reply/
+   * mention replies require `readComments` (the same gate the inbox UI applies).
+   * Records the reply as a published post so tests can assert it landed.
+   */
+  replyToInboxItem(
+    item: ProviderInboxItem,
+    text: string
+  ): Promise<PublishResult> {
+    const caps = this.matrix[item.platform];
+    const allowed = item.kind === "dm" ? caps?.sendDM : caps?.readComments;
+    if (!allowed) {
+      return Promise.resolve({
+        ok: false,
+        error: `Replying to ${item.kind} is not supported for ${item.platform}`,
+      });
+    }
+    this.sequence += 1;
+    const remoteId = `fake_reply_${item.externalId}_${this.sequence}`;
+    const remoteUrl = `https://fake.local/${item.platform}/${remoteId}`;
+    this.posts.set(remoteId, {
+      remoteId,
+      platform: item.platform,
+      accountId: "reply",
+      text,
+      mediaCount: 0,
+      segmentCount: 1,
+      segmentTexts: [text],
+      remoteUrl,
+      publishedAt: this.now(),
+    });
+    return Promise.resolve({ ok: true, remoteId, remoteUrl });
   }
 }
