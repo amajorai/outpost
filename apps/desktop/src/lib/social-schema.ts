@@ -124,3 +124,81 @@ export interface Template {
   body: string;
   createdAt: number;
 }
+
+/** The kind of a saved media asset, derived from its MIME type. */
+export type MediaAssetKind = "image" | "video";
+
+/**
+ * A reusable media item in the workspace's library (U13).
+ *
+ * Like a composer attachment, this is a *reference* to a local file (its path),
+ * never a copy. Saving an attachment to the library lets it be reused across
+ * posts. The matching DDL lives in the v10 -> v11 migration in `lib/db.ts`.
+ */
+export interface MediaAsset {
+  id: string;
+  workspaceId: string;
+  kind: MediaAssetKind;
+  /** Local file path (the absolute path the file dialog returned). */
+  path: string;
+  /** Display file name. */
+  name: string;
+  /** Best-effort MIME type derived from the file extension, when known. */
+  mimeType: string | null;
+  createdAt: number;
+}
+
+/** A named brand color. */
+export interface BrandColor {
+  name: string;
+  /** CSS color value, e.g. a hex string. */
+  value: string;
+}
+
+/** A brand font family. */
+export interface BrandFont {
+  name: string;
+  /** CSS font-family value. */
+  family: string;
+}
+
+/** A brand logo, referencing a local file path. */
+export interface BrandLogo {
+  /** Local file path. */
+  path: string;
+  name: string;
+}
+
+/** Where a watermark anchors over a post preview. */
+export type WatermarkPosition =
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right"
+  | "center";
+
+/** The brand watermark applied over post media. */
+export interface BrandWatermark {
+  /** Local file path of the watermark image (typically a logo). */
+  path: string;
+  position: WatermarkPosition;
+  /** 0..1 opacity of the overlay. */
+  opacity: number;
+}
+
+/**
+ * A workspace's brand kit (U13): logos, colors, fonts, and an optional
+ * watermark. Stored as a single per-workspace row whose list/object fields are
+ * JSON blobs so the shape can evolve without a SQLite migration. The matching
+ * DDL lives in the v10 -> v11 migration in `lib/db.ts`.
+ */
+export interface BrandKit {
+  id: string;
+  workspaceId: string;
+  logos: BrandLogo[];
+  colors: BrandColor[];
+  fonts: BrandFont[];
+  watermark: BrandWatermark | null;
+  createdAt: number;
+  updatedAt: number;
+}

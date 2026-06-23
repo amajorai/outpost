@@ -56,6 +56,13 @@ interface ComposerState {
   platformVariants: Record<string, string>;
   /** True while an AI reformat run is in flight. */
   isReformatting: boolean;
+  /**
+   * Platforms the user has opted to apply the brand watermark to for this post
+   * (U13). Like `platformVariants`, this is ephemeral composer state — it drives
+   * the live preview overlay and is NOT persisted into the (versioned) draft
+   * body, so it never triggers a DraftBody migration. Cleared on `reset()`.
+   */
+  watermarkPlatforms: string[];
   /** The draft currently being edited, or null for an unsaved post. */
   draftId: string | null;
   /**
@@ -97,6 +104,8 @@ interface ComposerState {
   setPlatformVariant: (platform: string, text: string) => void;
   /** Drop a platform's variant so it falls back to the shared draft text. */
   clearPlatformVariant: (platform: string) => void;
+  /** Toggle whether the brand watermark applies to a platform for this post. */
+  toggleWatermarkPlatform: (platform: string) => void;
   reset: () => void;
   /** Save (insert or update) the current draft. */
   save: () => Promise<void>;
@@ -143,6 +152,7 @@ export const useComposerStore = create<ComposerState>()((set, get) => ({
   accounts: [],
   platformVariants: {},
   isReformatting: false,
+  watermarkPlatforms: [],
   draftId: null,
   pendingScheduledAt: null,
   isSubmitting: false,
@@ -269,6 +279,13 @@ export const useComposerStore = create<ComposerState>()((set, get) => ({
       return { platformVariants: next };
     }),
 
+  toggleWatermarkPlatform: (platform) =>
+    set((state) => ({
+      watermarkPlatforms: state.watermarkPlatforms.includes(platform)
+        ? state.watermarkPlatforms.filter((p) => p !== platform)
+        : [...state.watermarkPlatforms, platform],
+    })),
+
   reset: () =>
     set({
       segments: [{ text: "", media: [] }],
@@ -276,6 +293,7 @@ export const useComposerStore = create<ComposerState>()((set, get) => ({
       media: [],
       selectedAccountIds: [],
       platformVariants: {},
+      watermarkPlatforms: [],
       draftId: null,
       error: null,
     }),

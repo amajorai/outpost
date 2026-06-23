@@ -16,6 +16,7 @@ import {
   mimeTypeForPath,
 } from "@/lib/compose/platform-limits";
 import { logger } from "@/lib/logger";
+import { MediaLibraryDialog } from "./media-library-dialog";
 
 const MEDIA_EXTENSIONS = [
   "png",
@@ -112,16 +113,19 @@ export function MediaAttachments({
           ))}
         </div>
       )}
-      <Button
-        className="w-fit"
-        onClick={handlePick}
-        size="sm"
-        type="button"
-        variant="outline"
-      >
-        <ImagePlus className="size-4" />
-        Attach media
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          className="w-fit"
+          onClick={handlePick}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <ImagePlus className="size-4" />
+          Attach media
+        </Button>
+        <MediaLibraryDialog onPick={onAdd} />
+      </div>
     </div>
   );
 }

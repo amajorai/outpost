@@ -6,7 +6,7 @@ let db: Database | null = null;
 let dbInitPromise: Promise<Database> | null = null;
 
 // Bump this whenever you add a new migration below.
-const TARGET_SCHEMA_VERSION = 10;
+const TARGET_SCHEMA_VERSION = 11;
 
 /**
  * Pre-v10 domain tables that gain a `workspace_id` in the v10 migration.
@@ -305,6 +305,45 @@ const migrations: Record<number, MigrationFn> = {
         [DEFAULT_WORKSPACE_ID]
       );
     }
+  },
+  11: async (database) => {
+    // Media library + brand kit (U13). Both are workspace-scoped.
+    //
+    // media_assets stores references to local media (the same path strings the
+    // composer already holds) so saved assets can be reused across posts. We
+    // store a reference, never a copy of the file — mirroring the composer's
+    // attachment model. brand_kit is a per-workspace singleton (one row per
+    // workspace) whose logos/colors/fonts/watermark are JSON blobs so the shape
+    // can evolve without a SQLite migration.
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS media_assets (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        path TEXT NOT NULL,
+        name TEXT NOT NULL,
+        mime_type TEXT,
+        created_at INTEGER NOT NULL
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_media_assets_workspace ON media_assets(workspace_id, created_at)"
+    );
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS brand_kit (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL UNIQUE,
+        logos TEXT NOT NULL DEFAULT '[]',
+        colors TEXT NOT NULL DEFAULT '[]',
+        fonts TEXT NOT NULL DEFAULT '[]',
+        watermark TEXT,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_brand_kit_workspace ON brand_kit(workspace_id)"
+    );
   },
 };
 

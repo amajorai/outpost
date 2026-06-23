@@ -23,8 +23,37 @@ import {
   type SegmentStyle,
   validateSegmentsForPlatform,
 } from "@/lib/compose/platform-limits";
+import type { BrandWatermark } from "@/lib/social-schema";
 
-function PreviewMedia({ media }: { media: MediaAttachment[] }) {
+/** Tailwind classes anchoring the watermark overlay to its configured corner. */
+const WATERMARK_POSITION_CLASS: Record<BrandWatermark["position"], string> = {
+  "top-left": "top-2 left-2",
+  "top-right": "top-2 right-2",
+  "bottom-left": "bottom-2 left-2",
+  "bottom-right": "bottom-2 right-2",
+  center: "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
+};
+
+function WatermarkOverlay({ watermark }: { watermark: BrandWatermark }) {
+  return (
+    // biome-ignore lint/performance/noImgElement: Tauri webview, no next/image; local asset preview
+    // biome-ignore lint/correctness/useImageSize: overlay is CSS-sized
+    <img
+      alt=""
+      className={`pointer-events-none absolute z-10 h-1/4 max-h-12 w-auto object-contain ${WATERMARK_POSITION_CLASS[watermark.position]}`}
+      src={convertFileSrc(watermark.path)}
+      style={{ opacity: watermark.opacity }}
+    />
+  );
+}
+
+function PreviewMedia({
+  media,
+  watermark,
+}: {
+  media: MediaAttachment[];
+  watermark: BrandWatermark | null;
+}) {
   if (media.length === 0) {
     return null;
   }
@@ -32,29 +61,38 @@ function PreviewMedia({ media }: { media: MediaAttachment[] }) {
     <div className="grid grid-cols-2 gap-1.5">
       {media.map((item) => {
         const src = convertFileSrc(item.path);
-        return item.mimeType.startsWith("video/") ? (
-          <video
-            className="aspect-video w-full rounded-lg object-cover"
-            key={item.path}
-            muted
-            src={src}
-          />
-        ) : (
-          // biome-ignore lint/performance/noImgElement: Tauri webview, no next/image; local asset preview
-          // biome-ignore lint/correctness/useImageSize: preview is CSS-sized via aspect-video/object-cover
-          <img
-            alt={item.name}
-            className="aspect-video w-full rounded-lg object-cover"
-            key={item.path}
-            src={src}
-          />
+        return (
+          <div className="relative overflow-hidden rounded-lg" key={item.path}>
+            {item.mimeType.startsWith("video/") ? (
+              <video
+                className="aspect-video w-full object-cover"
+                muted
+                src={src}
+              />
+            ) : (
+              // biome-ignore lint/performance/noImgElement: Tauri webview, no next/image; local asset preview
+              // biome-ignore lint/correctness/useImageSize: preview is CSS-sized via aspect-video/object-cover
+              <img
+                alt={item.name}
+                className="aspect-video w-full object-cover"
+                src={src}
+              />
+            )}
+            {watermark && <WatermarkOverlay watermark={watermark} />}
+          </div>
         );
       })}
     </div>
   );
 }
 
-function SegmentBody({ segment }: { segment: ComposeSegment }) {
+function SegmentBody({
+  segment,
+  watermark,
+}: {
+  segment: ComposeSegment;
+  watermark: BrandWatermark | null;
+}) {
   return (
     <>
       <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
@@ -64,13 +102,19 @@ function SegmentBody({ segment }: { segment: ComposeSegment }) {
           <span className="text-muted-foreground italic">Nothing yet</span>
         )}
       </p>
-      <PreviewMedia media={segment.media} />
+      <PreviewMedia media={segment.media} watermark={watermark} />
     </>
   );
 }
 
 /** A vertical, connected stack of posts — the X/Bluesky/Threads thread layout. */
-function ThreadLayout({ segments }: { segments: ComposeSegment[] }) {
+function ThreadLayout({
+  segments,
+  watermark,
+}: {
+  segments: ComposeSegment[];
+  watermark: BrandWatermark | null;
+}) {
   return (
     <ol className="flex flex-col gap-2">
       {segments.map((segment, index) => (
@@ -85,7 +129,7 @@ function ThreadLayout({ segments }: { segments: ComposeSegment[] }) {
                 {index + 1}/{segments.length}
               </span>
             )}
-            <SegmentBody segment={segment} />
+            <SegmentBody segment={segment} watermark={watermark} />
           </div>
         </li>
       ))}
@@ -94,7 +138,13 @@ function ThreadLayout({ segments }: { segments: ComposeSegment[] }) {
 }
 
 /** A horizontal strip of slides — the Instagram/LinkedIn carousel layout. */
-function CarouselLayout({ segments }: { segments: ComposeSegment[] }) {
+function CarouselLayout({
+  segments,
+  watermark,
+}: {
+  segments: ComposeSegment[];
+  watermark: BrandWatermark | null;
+}) {
   return (
     <div className="flex gap-2 overflow-x-auto pb-1">
       {segments.map((segment, index) => (
@@ -108,7 +158,7 @@ function CarouselLayout({ segments }: { segments: ComposeSegment[] }) {
               Slide {index + 1}
             </span>
           )}
-          <SegmentBody segment={segment} />
+          <SegmentBody segment={segment} watermark={watermark} />
         </div>
       ))}
     </div>
@@ -118,28 +168,32 @@ function CarouselLayout({ segments }: { segments: ComposeSegment[] }) {
 function SegmentLayout({
   style,
   segments,
+  watermark,
 }: {
   style: SegmentStyle;
   segments: ComposeSegment[];
+  watermark: BrandWatermark | null;
 }) {
   if (style === "thread") {
-    return <ThreadLayout segments={segments} />;
+    return <ThreadLayout segments={segments} watermark={watermark} />;
   }
   if (style === "carousel") {
-    return <CarouselLayout segments={segments} />;
+    return <CarouselLayout segments={segments} watermark={watermark} />;
   }
   // `none`: only the first segment publishes, so that's all we preview.
-  return <SegmentBody segment={segments[0]} />;
+  return <SegmentBody segment={segments[0]} watermark={watermark} />;
 }
 
 function PlatformPreviewCard({
   platform,
   accountLabels,
   segments,
+  watermark,
 }: {
   platform: string;
   accountLabels: string[];
   segments: ComposeSegment[];
+  watermark: BrandWatermark | null;
 }) {
   const limits = getPlatformLimits(platform);
   const error = validateSegmentsForPlatform(platform, segments);
@@ -169,7 +223,11 @@ function PlatformPreviewCard({
         </span>
       </div>
 
-      <SegmentLayout segments={segments} style={limits.segmentStyle} />
+      <SegmentLayout
+        segments={segments}
+        style={limits.segmentStyle}
+        watermark={watermark}
+      />
 
       <div className="flex flex-wrap items-center gap-1.5">
         {showsMulti && (
@@ -211,9 +269,18 @@ export interface PreviewGroup {
 export function ComposePreview({
   groups,
   segments,
+  watermark = null,
+  watermarkPlatforms,
 }: {
   groups: PreviewGroup[];
   segments: ComposeSegment[];
+  /** The brand watermark to overlay, or null when none is configured. */
+  watermark?: BrandWatermark | null;
+  /**
+   * Platforms the user has opted to apply the watermark to (U13). A platform
+   * not in this set previews without the overlay even when a watermark exists.
+   */
+  watermarkPlatforms?: ReadonlySet<string>;
 }) {
   if (groups.length === 0) {
     return (
@@ -231,6 +298,11 @@ export function ComposePreview({
           key={group.platform}
           platform={group.platform}
           segments={segments}
+          watermark={
+            watermark && watermarkPlatforms?.has(group.platform)
+              ? watermark
+              : null
+          }
         />
       ))}
     </div>

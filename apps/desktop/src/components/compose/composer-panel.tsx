@@ -13,6 +13,7 @@ import { CalendarClock, Loader2, Save, Send } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getSectionMeta } from "@/components/nav/sections";
 import { validateSegmentsForPlatform } from "@/lib/compose/platform-limits";
+import { useBrandKitStore } from "@/stores/use-brand-kit-store";
 import { useComposerStore } from "@/stores/use-composer-store";
 import { useIntegrationStore } from "@/stores/use-integration-store";
 import { ComposePreview, type PreviewGroup } from "./compose-preview";
@@ -22,6 +23,7 @@ import { platformLabel } from "./platform-meta";
 import { ReformatPanel } from "./reformat-panel";
 import { SegmentEditor } from "./segment-editor";
 import { TargetPicker } from "./target-picker";
+import { WatermarkControls } from "./watermark-controls";
 
 /** Matches one or more whitespace chars; top-level per lint/performance. */
 const WHITESPACE_RE = /\s+/;
@@ -62,9 +64,16 @@ export function ComposerPanel() {
   const postNow = useComposerStore((s) => s.postNow);
   const reset = useComposerStore((s) => s.reset);
   const consumeScheduledAt = useComposerStore((s) => s.consumeScheduledAt);
+  const watermarkPlatforms = useComposerStore((s) => s.watermarkPlatforms);
+  const toggleWatermarkPlatform = useComposerStore(
+    (s) => s.toggleWatermarkPlatform
+  );
 
   const capabilityMatrix = useIntegrationStore((s) => s.capabilityMatrix);
   const refreshIntegration = useIntegrationStore((s) => s.refresh);
+
+  const brandKit = useBrandKitStore((s) => s.kit);
+  const loadBrandKit = useBrandKitStore((s) => s.load);
 
   const [scheduleValue, setScheduleValue] = useState(defaultScheduleValue);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
@@ -72,12 +81,13 @@ export function ComposerPanel() {
   useEffect(() => {
     loadAccounts();
     refreshIntegration();
+    loadBrandKit();
     // If the calendar handed us a slot time (U11), seed the schedule field.
     const pending = consumeScheduledAt();
     if (pending !== null) {
       setScheduleValue(toScheduleValue(new Date(pending)));
     }
-  }, [loadAccounts, refreshIntegration, consumeScheduledAt]);
+  }, [loadAccounts, refreshIntegration, loadBrandKit, consumeScheduledAt]);
 
   const selectedAccounts = useMemo(
     () => accounts.filter((a) => selectedAccountIds.includes(a.id)),
@@ -102,6 +112,12 @@ export function ComposerPanel() {
   const selectedPlatforms = useMemo(
     () => [...new Set(selectedAccounts.map((a) => a.platform))],
     [selectedAccounts]
+  );
+
+  // The set of platforms the brand watermark applies to for this post (U13).
+  const watermarkPlatformSet = useMemo(
+    () => new Set(watermarkPlatforms),
+    [watermarkPlatforms]
   );
 
   // Insert a researched hashtag/keyword into the primary segment. Dedupes so a
@@ -220,13 +236,25 @@ export function ComposerPanel() {
               text={segments[0]?.text ?? ""}
             />
 
+            <WatermarkControls
+              appliedPlatforms={watermarkPlatformSet}
+              hasWatermark={brandKit.watermark !== null}
+              onToggle={toggleWatermarkPlatform}
+              platforms={selectedPlatforms}
+            />
+
             <ReformatPanel capabilityMatrix={capabilityMatrix} />
           </div>
 
           {/* Preview column */}
           <div className="flex flex-col gap-2">
             <span className="font-medium text-sm">Preview</span>
-            <ComposePreview groups={previewGroups} segments={segments} />
+            <ComposePreview
+              groups={previewGroups}
+              segments={segments}
+              watermark={brandKit.watermark}
+              watermarkPlatforms={watermarkPlatformSet}
+            />
           </div>
         </div>
 

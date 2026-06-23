@@ -1,6 +1,7 @@
 import { getSectionMeta } from "@/components/nav/sections";
 import { AccountsSettings } from "@/components/settings/accounts-settings";
 import { BlueskySettings } from "@/components/settings/bluesky-settings";
+import { BrandKitSettings } from "@/components/settings/brand-kit-settings";
 import { ComposioSettings } from "@/components/settings/composio-settings";
 import { SchedulerSettings } from "@/components/settings/scheduler-settings";
 import { ThreadsSettings } from "@/components/settings/threads-settings";
@@ -19,6 +20,7 @@ export function SettingsPanel() {
         <BlueskySettings />
         <ThreadsSettings />
         <AccountsSettings />
+        <BrandKitSettings />
         <SchedulerSettings />
       </div>
     </section>
