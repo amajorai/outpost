@@ -129,7 +129,7 @@ export interface EngagementCounts {
  */
 export interface PlatformProvider {
   /** Stable identifier of this provider implementation. */
-  readonly id: "composio" | "fake" | "bluesky";
+  readonly id: "composio" | "fake" | "bluesky" | "threads";
 
   /**
    * Establish (or re-establish) a connection for an account. Resolves when the

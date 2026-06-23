@@ -16,6 +16,7 @@ import { BlueskyProvider } from "./bluesky";
 import { clearCapabilityCache } from "./capability-cache";
 import { ComposioProvider } from "./composio";
 import { FakePlatformProvider } from "./fake";
+import { ThreadsProvider } from "./threads";
 import type { Platform, PlatformProvider } from "./types";
 
 let active: PlatformProvider | null = null;
@@ -24,6 +25,9 @@ let pending: Promise<PlatformProvider> | null = null;
 let bluesky: BlueskyProvider | null = null;
 let blueskyPending: Promise<BlueskyProvider | null> | null = null;
 
+let threads: ThreadsProvider | null = null;
+let threadsPending: Promise<ThreadsProvider | null> | null = null;
+
 async function build(): Promise<PlatformProvider> {
   const composio = await ComposioProvider.fromStoredKey();
   return composio ?? new FakePlatformProvider();
@@ -31,6 +35,10 @@ async function build(): Promise<PlatformProvider> {
 
 async function buildBluesky(): Promise<BlueskyProvider | null> {
   return await BlueskyProvider.fromStoredCredentials();
+}
+
+async function buildThreads(): Promise<ThreadsProvider | null> {
+  return await ThreadsProvider.fromStoredCredentials();
 }
 
 /**
@@ -70,6 +78,24 @@ export function getBlueskyProvider(): Promise<BlueskyProvider | null> {
 }
 
 /**
+ * Get the memoized Threads direct provider, or null when no Threads credentials
+ * are configured. Concurrent callers share the in-flight build.
+ */
+export function getThreadsProvider(): Promise<ThreadsProvider | null> {
+  if (threads) {
+    return Promise.resolve(threads);
+  }
+  if (!threadsPending) {
+    threadsPending = buildThreads().then((provider) => {
+      threads = provider;
+      threadsPending = null;
+      return provider;
+    });
+  }
+  return threadsPending;
+}
+
+/**
  * Resolve the provider responsible for a given platform.
  *
  * Direct adapters take precedence over the global active provider: a configured
@@ -85,6 +111,12 @@ export async function getProviderFor(
 ): Promise<PlatformProvider> {
   if (platform === "bluesky") {
     const direct = await getBlueskyProvider();
+    if (direct) {
+      return direct;
+    }
+  }
+  if (platform === "threads") {
+    const direct = await getThreadsProvider();
     if (direct) {
       return direct;
     }
@@ -116,6 +148,17 @@ export function resetBlueskyProvider(): void {
   blueskyPending = null;
 }
 
+/**
+ * Forget the memoized Threads provider and its cached capabilities. The next
+ * `getThreadsProvider()` re-resolves from secure storage. Call this whenever the
+ * Threads credentials are stored or removed.
+ */
+export function resetThreadsProvider(): void {
+  clearCapabilityCache("threads");
+  threads = null;
+  threadsPending = null;
+}
+
 export {
   BLUESKY_APP_PASSWORD_NAME,
   BLUESKY_HANDLE_NAME,
@@ -139,6 +182,15 @@ export {
   storeComposioApiKey,
 } from "./composio";
 export { FakePlatformProvider } from "./fake";
+export {
+  getThreadsCredentials,
+  hasThreadsCredentials,
+  removeThreadsCredentials,
+  storeThreadsCredentials,
+  THREADS_ACCESS_TOKEN_NAME,
+  THREADS_USER_ID_NAME,
+  ThreadsProvider,
+} from "./threads";
 export type {
   CapabilityMatrix,
   EngagementCounts,

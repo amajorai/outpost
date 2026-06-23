@@ -3,6 +3,7 @@ import { AccountsSettings } from "@/components/settings/accounts-settings";
 import { BlueskySettings } from "@/components/settings/bluesky-settings";
 import { ComposioSettings } from "@/components/settings/composio-settings";
 import { SchedulerSettings } from "@/components/settings/scheduler-settings";
+import { ThreadsSettings } from "@/components/settings/threads-settings";
 
 export function SettingsPanel() {
   const { label, description } = getSectionMeta("settings");
@@ -16,6 +17,7 @@ export function SettingsPanel() {
         </header>
         <ComposioSettings />
         <BlueskySettings />
+        <ThreadsSettings />
         <AccountsSettings />
         <SchedulerSettings />
       </div>
