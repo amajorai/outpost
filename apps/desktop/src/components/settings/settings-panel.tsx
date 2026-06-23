@@ -1,5 +1,6 @@
 import { getSectionMeta } from "@/components/nav/sections";
 import { AccountsSettings } from "@/components/settings/accounts-settings";
+import { BlueskySettings } from "@/components/settings/bluesky-settings";
 import { ComposioSettings } from "@/components/settings/composio-settings";
 import { SchedulerSettings } from "@/components/settings/scheduler-settings";
 
@@ -14,6 +15,7 @@ export function SettingsPanel() {
           <p className="text-muted-foreground text-sm">{description}</p>
         </header>
         <ComposioSettings />
+        <BlueskySettings />
         <AccountsSettings />
         <SchedulerSettings />
       </div>
