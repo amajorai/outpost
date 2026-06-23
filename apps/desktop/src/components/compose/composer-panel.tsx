@@ -19,6 +19,7 @@ import { useIntegrationStore } from "@/stores/use-integration-store";
 import { ComposePreview, type PreviewGroup } from "./compose-preview";
 import { DraftsDialog } from "./drafts-dialog";
 import { HashtagSuggestions } from "./hashtag-suggestions";
+import { PerformancePredictor } from "./performance-predictor";
 import { platformLabel } from "./platform-meta";
 import { ReformatPanel } from "./reformat-panel";
 import { SegmentEditor } from "./segment-editor";
@@ -120,6 +121,14 @@ export function ComposerPanel() {
     () => new Set(watermarkPlatforms),
     [watermarkPlatforms]
   );
+
+  // The chosen schedule time as epoch millis, for the performance predictor's
+  // posting-time fit (U24). Null when the field is empty/unparseable so timing
+  // contributes a neutral default rather than a penalty.
+  const scheduledForMillis = useMemo<number | null>(() => {
+    const at = new Date(scheduleValue).getTime();
+    return Number.isNaN(at) ? null : at;
+  }, [scheduleValue]);
 
   // Insert a researched hashtag/keyword into the primary segment. Dedupes so a
   // repeated click is a no-op, and adds a separating space when needed. We only
@@ -237,6 +246,13 @@ export function ComposerPanel() {
             <HashtagSuggestions
               onInsert={handleInsertSuggestion}
               platforms={selectedPlatforms}
+              text={segments[0]?.text ?? ""}
+            />
+
+            <PerformancePredictor
+              media={segments[0]?.media ?? []}
+              platforms={selectedPlatforms}
+              scheduledFor={scheduledForMillis}
               text={segments[0]?.text ?? ""}
             />
 
