@@ -1,6 +1,11 @@
 import { cn } from "heroui-native";
-import type { PropsWithChildren } from "react";
-import { ScrollView, View, type ViewProps } from "react-native";
+import type { PropsWithChildren, ReactElement } from "react";
+import {
+  type RefreshControlProps,
+  ScrollView,
+  View,
+  type ViewProps,
+} from "react-native";
 import Animated, { type AnimatedProps } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -8,11 +13,14 @@ const AnimatedView = Animated.createAnimatedComponent(View);
 
 type Props = AnimatedProps<ViewProps> & {
   className?: string;
+  /** Optional pull-to-refresh control forwarded to the inner ScrollView. */
+  refreshControl?: ReactElement<RefreshControlProps>;
 };
 
 export function Container({
   children,
   className,
+  refreshControl,
   ...props
 }: PropsWithChildren<Props>) {
   const insets = useSafeAreaInsets();
@@ -25,7 +33,10 @@ export function Container({
       }}
       {...props}
     >
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        refreshControl={refreshControl}
+      >
         {children}
       </ScrollView>
     </AnimatedView>

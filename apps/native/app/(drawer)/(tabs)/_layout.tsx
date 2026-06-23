@@ -5,11 +5,13 @@ import { useThemeColor } from "heroui-native";
 export default function TabLayout() {
   const themeColorForeground = useThemeColor("foreground");
   const themeColorBackground = useThemeColor("background");
+  const themeColorAccent = useThemeColor("accent");
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarActiveTintColor: themeColorAccent,
         headerStyle: {
           backgroundColor: themeColorBackground,
         },
@@ -33,11 +35,20 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="two"
+        name="approvals"
         options={{
-          title: "Explore",
+          title: "Approvals",
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons color={color} name="compass" size={size} />
+            <Ionicons color={color} name="checkmark-done" size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="compose"
+        options={{
+          title: "Compose",
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+            <Ionicons color={color} name="create" size={size} />
           ),
         }}
       />

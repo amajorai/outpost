@@ -18,7 +18,9 @@ const posthog =
 
 export const auth = betterAuth({
   database: mongodbAdapter(client),
-  trustedOrigins: [env.CORS_ORIGIN, "mybettertapp://", "exp://"],
+  // "outpost://" is the Expo app scheme (apps/native/app.json) the @better-auth/expo
+  // client sends as Origin on native auth requests; "exp://" covers Expo Go dev.
+  trustedOrigins: [env.CORS_ORIGIN, "outpost://", "exp://"],
   emailAndPassword: {
     enabled: true,
   },

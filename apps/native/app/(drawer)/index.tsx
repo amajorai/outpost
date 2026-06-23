@@ -1,50 +1,49 @@
-import { Card, useThemeColor } from "heroui-native";
-import { Pressable, Text, View } from "react-native";
+/**
+ * Drawer landing (U34). Auth is handled globally by AuthGate, so this is only
+ * ever reached signed-in. It points into the companion tabs.
+ */
+
+import { Link } from "expo-router";
+import { Button, Card } from "heroui-native";
+import { Text, View } from "react-native";
 
 import { Container } from "@/components/container";
-import { SignIn } from "@/components/sign-in";
-import { SignUp } from "@/components/sign-up";
 import { authClient } from "@/lib/auth-client";
 
-export default function Home() {
+export default function DrawerHome() {
   const { data: session } = authClient.useSession();
-
-  const _mutedColor = useThemeColor("muted");
-  const _successColor = useThemeColor("success");
-  const _dangerColor = useThemeColor("danger");
-  const _foregroundColor = useThemeColor("foreground");
 
   return (
     <Container className="p-6">
       <View className="mb-6 py-4">
-        <Text className="mb-2 font-bold text-4xl text-foreground">
-          BETTER T STACK
+        <Text className="mb-2 font-bold text-4xl text-foreground">Outpost</Text>
+        <Text className="text-muted text-sm">
+          Your mobile companion for approvals and posting.
         </Text>
       </View>
 
       {session?.user ? (
         <Card className="mb-6 p-4" variant="secondary">
-          <Text className="mb-2 text-base text-foreground">
-            Welcome, <Text className="font-medium">{session.user.name}</Text>
+          <Text className="mb-1 text-base text-foreground">
+            Welcome, {session.user.name}
           </Text>
           <Text className="mb-4 text-muted text-sm">{session.user.email}</Text>
-          <Pressable
-            className="self-start rounded-lg bg-danger px-4 py-3 active:opacity-70"
-            onPress={() => {
-              authClient.signOut();
-            }}
-          >
-            <Text className="font-medium text-foreground">Sign Out</Text>
-          </Pressable>
+          <Button onPress={() => authClient.signOut()} variant="ghost">
+            <Button.Label>Sign out</Button.Label>
+          </Button>
         </Card>
       ) : null}
 
-      {!session?.user && (
-        <>
-          <SignIn />
-          <SignUp />
-        </>
-      )}
+      <Link asChild href="/(drawer)/(tabs)/approvals">
+        <Button className="mb-3">
+          <Button.Label>Open approvals</Button.Label>
+        </Button>
+      </Link>
+      <Link asChild href="/(drawer)/(tabs)/compose">
+        <Button variant="secondary">
+          <Button.Label>Compose a post</Button.Label>
+        </Button>
+      </Link>
     </Container>
   );
 }

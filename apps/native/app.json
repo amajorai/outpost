@@ -8,7 +8,7 @@
     },
     "name": "Outpost",
     "slug": "outpost",
-    "plugins": ["expo-font"],
+    "plugins": ["expo-font", "expo-notifications"],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
