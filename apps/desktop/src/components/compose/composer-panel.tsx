@@ -25,6 +25,7 @@ import { ReformatPanel } from "./reformat-panel";
 import { SegmentEditor } from "./segment-editor";
 import { TargetPicker } from "./target-picker";
 import { TemplatesDialog } from "./templates-dialog";
+import { TimingSuggestions } from "./timing-suggestions";
 import { WatermarkControls } from "./watermark-controls";
 
 /** Matches one or more whitespace chars; top-level per lint/performance. */
@@ -295,6 +296,13 @@ export function ComposerPanel() {
               value={scheduleValue}
             />
           </div>
+
+          <TimingSuggestions
+            onApply={(epochMillis) =>
+              setScheduleValue(toScheduleValue(new Date(epochMillis)))
+            }
+            platforms={selectedPlatforms}
+          />
 
           {validationError && (
             <p className="text-destructive text-sm" role="alert">

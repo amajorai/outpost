@@ -23,6 +23,7 @@ import {
   type CalendarEvent,
   EventCalendar,
 } from "@/components/calendar/event-calendar";
+import { TimingRecommendations } from "@/components/calendar/timing-recommendations";
 import { getSectionMeta } from "@/components/nav/sections";
 import { logger } from "@/lib/logger";
 import {
@@ -81,6 +82,16 @@ export function CalendarPanel() {
     [prefillSchedule, setActiveSection]
   );
 
+  // Picking a recommended slot reuses the empty-slot path: seed the composer's
+  // schedule time and jump to Compose.
+  const handlePickSlot = useCallback(
+    (epochMillis: number) => {
+      prefillSchedule(epochMillis);
+      setActiveSection("compose");
+    },
+    [prefillSchedule, setActiveSection]
+  );
+
   const handleEventUpdate = useCallback(
     async (event: CalendarEvent) => {
       const status = statusById.get(event.id);
@@ -117,6 +128,7 @@ export function CalendarPanel() {
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-4 sm:px-6">
       <h1 className="sr-only">{label}</h1>
+      <TimingRecommendations onPickSlot={handlePickSlot} />
       <div className="flex min-h-0 flex-1 flex-col">
         <EventCalendar
           events={events}
