@@ -8,7 +8,6 @@ import { usePublishRunner } from "@/hooks/use-publish-runner";
 import { useScheduler } from "@/hooks/use-scheduler";
 import { useWindowBounds } from "@/hooks/use-window-bounds";
 import { setAxiomLoggingEnabled } from "@/lib/logger";
-import { runMigrations } from "@/lib/migration";
 import { initPostHog } from "@/lib/posthog";
 import { useAppSettingsStore } from "@/stores/use-app-settings-store";
 import { useLicenseStore } from "@/stores/use-license-store";
@@ -56,20 +55,9 @@ export default function App() {
   const navInitialLoadDone = useNavigationStore((s) => s.isInitialLoadDone);
 
   useEffect(() => {
-    // App-data migration must finish first — it moves files from the old
-    // `pub.youtube.desktop` appdata dir to the current one. Reading the
-    // license/settings before it completes can show a freshly-installed user
-    // as unlicensed on upgrade from the rebranded build.
-    (async () => {
-      try {
-        await runMigrations();
-      } catch {
-        // best-effort migration; still load license/settings
-      }
-      loadStoredLicense();
-      loadSettings();
-      loadNavigation();
-    })();
+    loadStoredLicense();
+    loadSettings();
+    loadNavigation();
   }, [loadStoredLicense, loadSettings, loadNavigation]);
 
   useEffect(() => {

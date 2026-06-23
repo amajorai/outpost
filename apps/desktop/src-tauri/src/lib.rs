@@ -13,50 +13,6 @@ pub mod secure_storage;
 pub mod security;
 pub mod upscale;
 
-#[tauri::command]
-async fn migrate_app_data(app: tauri::AppHandle) -> Result<bool, String> {
-    let new_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-
-    // Skip if already migrated
-    let marker = new_data_dir.join(".migrated_from_youtube_pub");
-    if marker.exists() {
-        return Ok(false);
-    }
-
-    let roaming_dir = new_data_dir.parent().ok_or("no parent")?;
-    let old_data_dir = roaming_dir.join("pub.youtube.desktop");
-
-    if !old_data_dir.exists() {
-        // Mark as done so we don't check again on every launch
-        let _ = std::fs::write(&marker, b"");
-        return Ok(false);
-    }
-
-    copy_dir_best_effort(&old_data_dir, &new_data_dir);
-    let _ = std::fs::write(&marker, b"");
-    Ok(true)
-}
-
-fn copy_dir_best_effort(src: &std::path::Path, dst: &std::path::Path) {
-    let _ = std::fs::create_dir_all(dst);
-    let entries = match std::fs::read_dir(src) {
-        Ok(e) => e,
-        Err(_) => return,
-    };
-    for entry in entries.flatten() {
-        let ty = match entry.file_type() {
-            Ok(t) => t,
-            Err(_) => continue,
-        };
-        let dest_path = dst.join(entry.file_name());
-        if ty.is_dir() {
-            copy_dir_best_effort(&entry.path(), &dest_path);
-        } else {
-            // Skip files that are locked (e.g. SQLite WAL) — non-fatal
-            let _ = std::fs::copy(entry.path(), dest_path);
-        }
-    }
-}
 
 #[tauri::command]
 async fn fetch_as_base64(url: String) -> Result<String, String> {
@@ -286,7 +242,6 @@ pub fn run() {
             get_bridge_token,
             local_embeddings_available,
             import_backup,
-            migrate_app_data,
             upscale::upscaler_status,
             upscale::download_upscaler,
             upscale::upscale_image,

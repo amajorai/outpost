@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "youtube.pub",
+      "name": "outpost",
       "dependencies": {
         "@outpost/env": "workspace:*",
         "@web-kits/audio": "^0.1.0",
