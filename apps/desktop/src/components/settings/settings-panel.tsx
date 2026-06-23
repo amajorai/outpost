@@ -1,5 +1,6 @@
 import { getSectionMeta } from "@/components/nav/sections";
 import { AccountsSettings } from "@/components/settings/accounts-settings";
+import { AutopilotSettings } from "@/components/settings/autopilot-settings";
 import { BlueskySettings } from "@/components/settings/bluesky-settings";
 import { BrandKitSettings } from "@/components/settings/brand-kit-settings";
 import { BridgeSettings } from "@/components/settings/bridge-settings";
@@ -24,6 +25,7 @@ export function SettingsPanel() {
         <AccountsSettings />
         <BrandKitSettings />
         <SchedulerSettings />
+        <AutopilotSettings />
         <BridgeSettings />
         <CrossPostSettings />
       </div>

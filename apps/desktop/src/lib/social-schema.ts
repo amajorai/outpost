@@ -496,3 +496,71 @@ export interface TrendSignal {
   /** Unix epoch millis the signal was fetched/cached. */
   fetchedAt: number;
 }
+
+/**
+ * How much the autopilot crew orchestrator (U30) is allowed to act on its own:
+ * - `suggest`: only show the proposed plan; never queue anything.
+ * - `approve-each`: the DEFAULT — every queued action needs an explicit per-action
+ *   user approval before it touches a real account.
+ * - `full-auto`: queue + schedule proposed posts without prompting.
+ *
+ * `full-auto` is OFF by default and requires an explicit, confirmed opt-in
+ * (a Dialog that states it posts to real public accounts), per the unit's safety
+ * contract. When a persisted value is absent or unrecognized, callers MUST coerce
+ * to `approve-each` so the absence path can never resolve to `full-auto`.
+ */
+export type AutopilotAutonomy = "suggest" | "approve-each" | "full-auto";
+
+/** The default autonomy level. Never `full-auto`. */
+export const DEFAULT_AUTOPILOT_AUTONOMY: AutopilotAutonomy = "approve-each";
+
+/**
+ * The lifecycle of a single autopilot action (U30):
+ * - `proposed`: the strategist put it in the plan; nothing has touched a real
+ *   account yet.
+ * - `approved`: the user explicitly approved it (the `approve-each` gate) but it
+ *   has not been queued yet — a transient state the store advances through.
+ * - `queued`: it has been turned into a real `scheduled_posts` row (the auditable
+ *   "this was actually queued" record). `scheduledPostId` is then set.
+ * - `rejected`: the user declined it; it stays in the log for auditability.
+ */
+export type AutopilotActionStatus =
+  | "proposed"
+  | "approved"
+  | "queued"
+  | "rejected";
+
+/**
+ * One auditable autopilot action (U30): a proposed post in a weekly content plan.
+ *
+ * This single table doubles as plan storage AND the audit log the unit's
+ * acceptance criteria require — one row per proposed post, grouped into a plan by
+ * `planId`. The strategist agent produces the body + rationale + timing hint; the
+ * orchestrator assigns a concrete `scheduledFor` deterministically from the U26
+ * timing recommender. `status` records whether it was approved/queued/rejected,
+ * and `scheduledPostId` links a queued action to the real `scheduled_posts` row it
+ * created, so the whole chain stays inspectable. `body` is a JSON-encoded draft
+ * body (the same shape `drafts.body` / experiment `draftBody` use) so the action
+ * shape can evolve without a schema migration. Workspace-scoped. DDL lives in the
+ * v17 -> v18 migration in `lib/db.ts`.
+ */
+export interface AutopilotAction {
+  id: string;
+  workspaceId: string;
+  /** Groups all actions proposed together as one weekly plan. */
+  planId: string;
+  /** JSON-encoded draft body for the proposed post. */
+  body: string;
+  /** The opening line/hook, surfaced in the plan UI. */
+  hook: string;
+  /** Platform key the post targets, e.g. "x". */
+  targetPlatform: string;
+  /** Concrete Unix epoch millis the orchestrator assigned, or null if unscheduled. */
+  scheduledFor: number | null;
+  /** Why the strategist proposed this, grounded in the crew's signals. */
+  rationale: string;
+  status: AutopilotActionStatus;
+  /** The `scheduled_posts` row this action created once queued, else null. */
+  scheduledPostId: string | null;
+  createdAt: number;
+}

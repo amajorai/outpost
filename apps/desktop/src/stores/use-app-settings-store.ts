@@ -6,6 +6,10 @@ import {
 import { load } from "@tauri-apps/plugin-store";
 import { create } from "zustand";
 import { logger } from "@/lib/logger";
+import {
+  type AutopilotAutonomy,
+  DEFAULT_AUTOPILOT_AUTONOMY,
+} from "@/lib/social-schema";
 
 const SETTINGS_STORE_NAME = "settings.json";
 const SEASONAL_EFFECTS_ENABLED_FIELD = "seasonal_effects_enabled";
@@ -32,6 +36,7 @@ const ONBOARDING_COMPLETED_FIELD = "onboarding_completed";
 const EXPERIMENTAL_FEATURES_FIELD = "experimental_features_enabled";
 const SOUNDS_ENABLED_FIELD = "sounds_enabled";
 const MCP_PORT_FIELD = "mcp_port";
+const AUTOPILOT_AUTONOMY_FIELD = "autopilot_autonomy";
 
 export type AppTheme = "light" | "dark" | "system";
 export type BgRemovalQuality = "fast" | "balanced" | "best";
@@ -83,6 +88,11 @@ interface AppSettingsState {
   soundsEnabled: boolean;
   mcpPort: number;
   /**
+   * How much the autopilot crew orchestrator (U30) may act on its own. Defaults
+   * to `approve-each`; `full-auto` requires an explicit, confirmed opt-in.
+   */
+  autopilotAutonomy: AutopilotAutonomy;
+  /**
    * Whether Outpost launches on login. The OS autostart registration is the
    * source of truth (the user can change it externally), so this mirrors the
    * plugin's `isEnabled()` rather than a persisted boolean alone.
@@ -118,6 +128,7 @@ interface AppSettingsState {
   setExperimentalFeaturesEnabled: (enabled: boolean) => Promise<void>;
   setSoundsEnabled: (enabled: boolean) => Promise<void>;
   setMcpPort: (port: number) => Promise<void>;
+  setAutopilotAutonomy: (autonomy: AutopilotAutonomy) => Promise<void>;
   setAutostartEnabled: (enabled: boolean) => Promise<void>;
   loadSettings: () => Promise<void>;
 }
@@ -126,6 +137,24 @@ interface AppSettingsState {
  * Read the OS autostart state, treating any failure as "not enabled". The OS
  * registration is the source of truth for whether Outpost launches on login.
  */
+/**
+ * Coerce a persisted autopilot autonomy value to a known level. CRITICAL SAFETY:
+ * an absent or unrecognized value MUST resolve to the safe default
+ * (`approve-each`), never `full-auto` — the Data Versioning Contract's "absence =
+ * old safe default" applied to a safety gate. `full-auto` is only ever reachable
+ * by an explicit, confirmed opt-in that persisted the literal string.
+ */
+function coerceAutonomy(value: unknown): AutopilotAutonomy {
+  if (
+    value === "suggest" ||
+    value === "approve-each" ||
+    value === "full-auto"
+  ) {
+    return value;
+  }
+  return DEFAULT_AUTOPILOT_AUTONOMY;
+}
+
 async function readAutostartEnabled(): Promise<boolean> {
   try {
     return await isAutostartEnabled();
@@ -161,6 +190,7 @@ export const useAppSettingsStore = create<AppSettingsState>()((set, _get) => ({
   experimentalFeaturesEnabled: false,
   soundsEnabled: true,
   mcpPort: 37_842,
+  autopilotAutonomy: DEFAULT_AUTOPILOT_AUTONOMY,
   autostartEnabled: false,
   isInitialLoadDone: false,
 
@@ -579,6 +609,23 @@ export const useAppSettingsStore = create<AppSettingsState>()((set, _get) => ({
     }
   },
 
+  setAutopilotAutonomy: async (autonomy: AutopilotAutonomy) => {
+    try {
+      const store = await load(SETTINGS_STORE_NAME, {
+        defaults: {},
+        autoSave: true,
+      });
+      await store.set(AUTOPILOT_AUTONOMY_FIELD, autonomy);
+      await store.save();
+      set({ autopilotAutonomy: autonomy });
+    } catch (error) {
+      logger.error(
+        { err: error },
+        "[Settings] Failed to save setting: autopilotAutonomy"
+      );
+    }
+  },
+
   setAutostartEnabled: async (enabled: boolean) => {
     try {
       if (enabled) {
@@ -664,12 +711,16 @@ export const useAppSettingsStore = create<AppSettingsState>()((set, _get) => ({
       );
       const soundsEnabled = await store.get<boolean>(SOUNDS_ENABLED_FIELD);
       const mcpPort = await store.get<number>(MCP_PORT_FIELD);
+      const autopilotAutonomy = await store.get<unknown>(
+        AUTOPILOT_AUTONOMY_FIELD
+      );
 
       // The OS autostart registration is the source of truth — the user may
       // have toggled it outside the app — so read it directly rather than
       // trusting a persisted boolean.
       const autostartEnabled = await readAutostartEnabled();
 
+      const resolvedAutonomy = coerceAutonomy(autopilotAutonomy);
       const finalTheme = theme ?? "dark";
 
       set({
@@ -697,6 +748,7 @@ export const useAppSettingsStore = create<AppSettingsState>()((set, _get) => ({
         experimentalFeaturesEnabled: experimentalFeaturesEnabled ?? false,
         soundsEnabled: soundsEnabled ?? true,
         mcpPort: mcpPort ?? 37_842,
+        autopilotAutonomy: resolvedAutonomy,
         autostartEnabled,
         isInitialLoadDone: true,
       });

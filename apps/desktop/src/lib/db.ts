@@ -6,7 +6,7 @@ let db: Database | null = null;
 let dbInitPromise: Promise<Database> | null = null;
 
 // Bump this whenever you add a new migration below.
-const TARGET_SCHEMA_VERSION = 17;
+const TARGET_SCHEMA_VERSION = 18;
 
 /**
  * Pre-v10 domain tables that gain a `workspace_id` in the v10 migration.
@@ -605,6 +605,46 @@ const migrations: Record<number, MigrationFn> = {
     );
     await database.execute(
       "CREATE UNIQUE INDEX IF NOT EXISTS idx_trend_signals_dedupe ON trend_signals(workspace_id, kind, platform, target_id, external_id)"
+    );
+  },
+  18: async (database) => {
+    // Crew orchestrator / Autopilot (U30). One workspace-scoped table that
+    // doubles as plan storage AND the audit log the unit requires: one row per
+    // proposed post, grouped into a weekly plan by `plan_id`.
+    //
+    // The Strategist agent coordinates the other crew roles (radar signal,
+    // timing recs, voice, experiment insights) into a weekly content plan; each
+    // proposed post is recorded here as `status = 'proposed'`. At the user's
+    // autonomy level, an action advances to `queued` (turning into a real
+    // scheduled_posts row, with `scheduled_post_id` linked) or `rejected` —
+    // every transition stays in this table so the whole chain is auditable.
+    //
+    // `body` is a JSON draft-body blob (the same shape `drafts.body` /
+    // `experiment_variants.draft_body` use) so the action shape can evolve
+    // without another SQLite migration. `scheduled_for` is the concrete time the
+    // orchestrator assigned from the U26 timing recommender (nullable while
+    // unscheduled). No own dedupe index is needed: rows are append-only proposals
+    // keyed by a generated id, never re-fetched from a remote source.
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS autopilot_actions (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        plan_id TEXT NOT NULL,
+        body TEXT NOT NULL,
+        hook TEXT NOT NULL,
+        target_platform TEXT NOT NULL,
+        scheduled_for INTEGER,
+        rationale TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL,
+        scheduled_post_id TEXT,
+        created_at INTEGER NOT NULL
+      )
+    `);
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_autopilot_actions_workspace ON autopilot_actions(workspace_id, created_at)"
+    );
+    await database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_autopilot_actions_plan ON autopilot_actions(plan_id)"
     );
   },
 };

@@ -1,5 +1,6 @@
 import {
   Activity,
+  Bot,
   CalendarDays,
   FlaskConical,
   Inbox,
@@ -70,6 +71,13 @@ export const NAV_SECTION_META: NavSectionMeta[] = [
     description:
       "A self-running loop that tests, scores, and keeps what works.",
     icon: Telescope,
+  },
+  {
+    id: "autopilot",
+    label: "Autopilot",
+    description:
+      "The Strategist coordinates the crew into a weekly plan you can queue.",
+    icon: Bot,
   },
   {
     id: "radar",
